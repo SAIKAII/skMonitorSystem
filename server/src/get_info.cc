@@ -12,9 +12,29 @@ extern const char *kDir;
 extern const char *kOverAllInfoOfUsers;
 extern const char *kOverAllInfoOfAvg;
 extern const char *kOverAllInfoOfMem;
+extern const char *kOverAllInfoOfUsage;
 extern const char *kProcessInfoOfCmd;
 extern const char *kProcessInfoOfMem;
+extern const char *kProcessInfoOfUsage;
+extern const unsigned short kMemLineEnd;
+extern const unsigned short kMemLineTotal;
+extern const unsigned short kMemLineFree;
+extern const unsigned short kMemLineAvail;
+extern const unsigned short kMemLineBuffer;
+extern const unsigned short kMemLineCached;
+extern const unsigned short kSwapLineUsed;
+extern const unsigned short kSwapLineTotal;
+extern const unsigned short kSwapLineFree;
 extern const unsigned short kMaxSlot;
+extern const unsigned short kProcessState;
+extern const unsigned short kProcessPid;
+extern const unsigned short kProcessPpid;
+extern const unsigned short kProcessUid;
+extern const unsigned short kProcessVmem;
+extern const unsigned short kProcessRSS;
+extern const unsigned short kProcessEnd;
+extern const unsigned short kProcessTimeStart;
+extern const unsigned short kProcessTimeEnd;
 
 GetInfo::GetInfo() : procs_info_(kMaxSlot), procs_cpu_time_(kMaxSlot){
   if(!(p_dir_ = opendir(kDir)){
