@@ -6,18 +6,18 @@
 #include <boost/asio.hpp>
 #include <memory>
 #include <mutex>
-#include <thread>
+#include <unordered_set>
 
-class SendData : public enable_shared_from_this<SendData>{
-  namespace asio = boost::asio;
+namespace asio = boost::asio;
 
+class SendData : public std::enable_shared_from_this<SendData>{
 public:
   SendData(std::shared_ptr<asio::streambuf> &write_buffer) : write_buffer_(write_buffer){}
-  void send_to_client(const std::unordered_set<std::shared_ptr<WebSocket>> connections){
-    
-  }
+  // void send_to_client(const std::unordered_set<std::shared_ptr<WebSocket>> connections){
+  //
+  // }
 
-private
+private:
   std::shared_ptr<asio::streambuf> write_buffer_;
 };
 

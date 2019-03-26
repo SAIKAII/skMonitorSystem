@@ -9,9 +9,9 @@
 
 const unsigned short kMaxProcess = 250;
 
-class ToJSON{
-  namespace asio = boost::asio;
+namespace asio = boost::asio;
 
+class ToJSON{
 public:
   ToJSON();
   void set_overallinfo(OverallInfo &overallinfo);

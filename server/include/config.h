@@ -6,7 +6,7 @@ public:
   Config(unsigned short port) noexcept : port_(port){}
 
   unsigned short port_;
-  std::string address;
+  std::string address_;
 };
 
 #endif

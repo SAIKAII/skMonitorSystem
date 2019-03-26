@@ -2,6 +2,7 @@
 #define skMNTSYS_INCLUDE_CONNECTION_H_
 
 #include "send_data.h"
+#include "utility.h"
 #include <memory>
 #include <boost/asio.hpp>
 #include <string>
@@ -11,14 +12,16 @@
 #include <mutex>
 #include <atomic>
 #include <regex>
+#include <utility>
+
+namespace asio = boost::asio;
+using error_code = boost::system::error_code;
 
 class Connection : public std::enable_shared_from_this<Connection>{
-  namespace asio = boost::asio;
-
 public:
-  Connection(std::unique_ptr<WS> &&socket/*隐式构造*/) noexcept : socket_(std::move(socket)), closed_(false){}
+  Connection(asio::io_service &io_service) noexcept : socket_(new asio::ip::tcp::socket(io_service)), closed_(false){}
   std::string method_, path_, query_string_, http_version_;
-  std::unordered_multimap<std::string, std::string> header_; // header有可能多个同样的
+  CaseInsensitiveMultimap header_; // header有可能多个同样的
   asio::ip::tcp::endpoint remote_endpoint_;
   std::unique_ptr<asio::ip::tcp::socket> socket_;
   std::smatch path_match_;
