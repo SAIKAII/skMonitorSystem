@@ -52,6 +52,7 @@ public:
       method = sub_match[1];
       path = sub_match[2];
       version = sub_match[3];
+      std::cout << "method: " << method << " path: " << path << " version: " << version << std::endl;
 
       std::regex regex_path("^([^ ])*\?([^ ]*)$");
       if(std::regex_match(path, sub_match, regex_path))

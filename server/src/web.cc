@@ -31,14 +31,17 @@ void Web::accept_and_run(){
     io_service_->reset();
 
   io_service_->run();
+  std::cout << "run complete!" << std::endl;
 }
 
 void Web::accept(){
   std::shared_ptr<Connection> connection(new Connection(*io_service_));
 
   acceptor_->async_accept(*connection->socket_, [this, connection](const error_code &ec){
-    if(ec != asio::error::operation_aborted)
+    if(ec != asio::error::operation_aborted){
+      std::cout << "accept()" << std::endl;
       accept();
+    }
 
     if(!ec){
       // 不使用nagle算法
@@ -58,14 +61,18 @@ void Web::read_and_parse(std::shared_ptr<Connection> connection){
       std::istream stream(&connection->read_buffer_);
       if(RequestMessage::parse(stream, connection->method_, connection->path_, connection->query_string_, connection->http_version_, connection->header_)){
         if(connection->header_.count("Sec-WebSocket-Key") > 0){
+          std::cout << "Web Socket Request" << std::endl;
           // 拥有这个头部，说明是Web Socket的连接请求
           WebSocket::write_handshake(connection);
         }
         else{
+          std::cout << "HTTP Request" << std::endl;
           // 否则是普通的HTTP请求
           auto http = std::make_shared<HTTP>(connection);
           http->respond();
         }
+      }else{
+        std::cout << "Parse failed!" << std::endl;
       }
 
     }

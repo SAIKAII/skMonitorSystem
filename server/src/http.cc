@@ -20,6 +20,7 @@ void HTTP::respond(){
         auto self = this->shared_from_this();
         asio::async_write(*connection_->socket_, *write_buffer, [self](const error_code &ec, std::size_t /* bytes_transferred */){
           // 暂不处理
+          std::cout << "HTTP write complete!" << std::endl;
         });
         return;
       }

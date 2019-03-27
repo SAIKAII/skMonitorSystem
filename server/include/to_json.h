@@ -7,7 +7,7 @@
 #include <memory>
 #include <boost/asio.hpp>
 
-const unsigned short kMaxProcess = 250;
+const unsigned int kMaxProcess = 250;
 
 namespace asio = boost::asio;
 
@@ -15,7 +15,7 @@ class ToJSON{
 public:
   ToJSON();
   void set_overallinfo(OverallInfo &overallinfo);
-  void set_processinfo(ProcessInfo &processinfo);
+  void set_processinfo(std::vector<ProcessInfo> &processinfo);
   void data_to_json(std::shared_ptr<asio::streambuf> &write_buffer);
   void notify_send_data();
 

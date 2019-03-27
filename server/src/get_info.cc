@@ -8,38 +8,38 @@
 #include <string.h>
 #include <unistd.h>
 
-extern const char *kDir;
-extern const char *kOverAllInfoOfUsers;
-extern const char *kOverAllInfoOfAvg;
-extern const char *kOverAllInfoOfMem;
-extern const char *kOverAllInfoOfUsage;
-extern const char *kProcessInfoOfCmd;
-extern const char *kProcessInfoOfMem;
-extern const char *kProcessInfoOfUsage;
-extern const unsigned short kMemLineEnd;
-extern const unsigned short kMemLineTotal;
-extern const unsigned short kMemLineFree;
-extern const unsigned short kMemLineAvail;
-extern const unsigned short kMemLineBuffer;
-extern const unsigned short kMemLineCached;
-extern const unsigned short kSwapLineUsed;
-extern const unsigned short kSwapLineTotal;
-extern const unsigned short kSwapLineFree;
-extern const unsigned short kMaxSlot;
-extern const unsigned short kProcessState;
-extern const unsigned short kProcessPid;
-extern const unsigned short kProcessPpid;
-extern const unsigned short kProcessUid;
-extern const unsigned short kProcessVmem;
-extern const unsigned short kProcessRSS;
-extern const unsigned short kProcessEnd;
-extern const unsigned short kProcessTimeStart;
-extern const unsigned short kProcessTimeEnd;
+const char *kDir = "/proc";
+const char *kOverAllInfoOfUsers = "/proc/key-users";
+const char *kOverAllInfoOfAvg = "/proc/loadavg";
+const char *kOverAllInfoOfMem = "/proc/meminfo";
+const char *kOverAllInfoOfUsage = "/proc/stat";
+const char *kProcessInfoOfCmd = "/proc/%s/cmdline";
+const char *kProcessInfoOfMem = "/proc/%s/status";
+const char *kProcessInfoOfUsage = "/proc/%u/stat";
+const unsigned short kMemLineEnd = 15;
+const unsigned short kMemLineTotal = 0;
+const unsigned short kMemLineFree = 1;
+const unsigned short kMemLineAvail = 2;
+const unsigned short kMemLineBuffer = 3;
+const unsigned short kMemLineCached = 4;
+const unsigned short kSwapLineUsed = 5;
+const unsigned short kSwapLineTotal = 14;
+const unsigned short kSwapLineFree = 15;
+const unsigned short kMaxSlot = 250;
+const unsigned short kProcessState = 2;
+const unsigned short kProcessPid = 5;
+const unsigned short kProcessPpid = 6;
+const unsigned short kProcessUid = 8;
+const unsigned short kProcessVmem = 17;
+const unsigned short kProcessRSS = 21;
+const unsigned short kProcessEnd = 21;
+const unsigned short kProcessTimeStart = 13;
+const unsigned short kProcessTimeEnd = 16;
 
 GetInfo::GetInfo() : procs_info_(kMaxSlot), procs_cpu_time_(kMaxSlot){
-  if(!(p_dir_ = opendir(kDir)){
+  if(!(p_dir_ = opendir(kDir))){
     perror("opendir:");
-    return -1;
+    exit(1);
   }
 }
 
@@ -50,6 +50,7 @@ void GetInfo::get_info(ToJSON &to_json){
 
   get_processinfo(overallinfo);
   to_json.set_processinfo(procs_info_);
+  to_json.notify_send_data();
   procs_info_.clear(); // 已经把需要的内容交换出去了，这里剩下的只是上一次（已经作废）的数据了
 }
 
@@ -125,7 +126,7 @@ void GetInfo::get_processinfo(OverallInfo &overallinfo){
   overallinfo.total = overallinfo.running = overallinfo.sleeping = 0;
   overallinfo.stopped = overallinfo.zombie = 0;
   dirent *ptr;
-  ifstream fin;
+  std::ifstream fin;
   while(ptr = readdir(p_dir_)){
     ProcessInfo processinfo;
     if(ptr->d_name[0] < '0' && ptr->d_name[0] > '9')
@@ -152,7 +153,7 @@ void GetInfo::get_processinfo(OverallInfo &overallinfo){
       switch(line){
         case kProcessState:
           sstr >> processinfo.state;
-          processinfo.state == 'R' ? ++overallinfo.running : processinfo.state == 'S' ? ++overallinfo.sleeping : processinfo.state == 'T' ? ++overallinfo.stopped : processinfo.state == 'Z' ? ++overallinfo.zombie : ;
+          processinfo.state == 'R' ? ++overallinfo.running : processinfo.state == 'S' ? ++overallinfo.sleeping : processinfo.state == 'T' ? ++overallinfo.stopped : processinfo.state == 'Z' ? ++overallinfo.zombie : NULL;
           break;
         case kProcessPid:
           sstr >> processinfo.pid;
@@ -199,7 +200,7 @@ void GetInfo::get_usage(){
   procs_cpu_time_.clear(); // 既然已经获取所有进程的CPU占用率，就把容器清空，留做下次使用
 }
 
-void GetInfo::read_host_cpu_jiffies(unsigned short &cpu){
+void GetInfo::read_host_cpu_jiffies(unsigned int &cpu){
   std::ifstream fin;
   fin.open(kOverAllInfoOfUsage);
   std::string invalid, tmp;
@@ -231,12 +232,15 @@ void GetInfo::read_procs_cpu_jiffies(bool first_time){
       sum += tm;
     }
     fin.close();
-    first_time ? procs_cpu_time_.push_back(sum) : procs_cpu_time_[index] = sum - procs_cpu_time_[index++];
+    if(first_time)
+      procs_cpu_time_.push_back(sum);
+    else
+      procs_cpu_time_[index] = sum - procs_cpu_time_[index++];
   }
 }
 
 GetInfo::~GetInfo(){
-  if(NULL != p_dir){
-    closedir(p_dir);
+  if(NULL != p_dir_){
+    closedir(p_dir_);
   }
 }

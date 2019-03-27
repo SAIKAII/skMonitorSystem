@@ -22,6 +22,11 @@ public:
   // std::function<void(std::shared_ptr<WebSocket>)> on_ping;
   // std::function<void(std::shared_ptr<WebSocket>)> on_pong;
 
+  static Endpoint *get_instance(){
+    static Endpoint endpoint;
+    return &endpoint;
+  }
+
   std::unordered_set<std::shared_ptr<WebSocket>> get_connections() noexcept{
     std::unique_lock<std::mutex> lock(connections_mutex_);
     auto copy = connections_;

@@ -17,7 +17,9 @@ public:
   static void write_handshake(std::shared_ptr<Connection> connection);
   static bool generate_handshake(std::shared_ptr<asio::streambuf> &write_buffer, const std::shared_ptr<Connection> connection);
 
-  WebSocket(std::shared_ptr<Connection> connection) : connection_(connection){}
+  WebSocket(std::shared_ptr<Connection> connection) : connection_(connection){
+    endpoint_ = Endpoint::get_instance();
+  }
   // void upgrade(const std::shared_ptr<Connection> &connection);
   void read_message();
   void read_message_content(std::size_t length, unsigned char fin_rsv_opcode);
@@ -29,7 +31,7 @@ public:
   void connection_error(std::shared_ptr<WebSocket> ws, const error_code &ec);
 
 private:
-  static Endpoint endpoint_;
+  Endpoint *endpoint_;
 
   std::shared_ptr<Connection> connection_;
 
