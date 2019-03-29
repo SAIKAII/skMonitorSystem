@@ -15,7 +15,7 @@ struct ProcessInfo{
   char state;
   unsigned short pid, ppid, userid;
   unsigned int pmem, vmem; // pmem = physical memory vmem = virtual memory
-  double cpu, mem;
+  unsigned int cpu, mem;
   std::string cmdline;
 };
 

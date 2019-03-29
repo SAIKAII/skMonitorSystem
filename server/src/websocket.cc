@@ -166,13 +166,6 @@ void WebSocket::read_message_content(std::size_t length, unsigned char fin_rsv_o
 
         connection_->fragmented_message_ = nullptr;
 
-        // 测试
-        std::shared_ptr<asio::streambuf> send_message = std::make_shared<asio::streambuf>();
-        std::ostream test(send_message.get());
-        test << "Hello!";
-        this->send(send_message);
-
-
         this->read_message();
       }
     }

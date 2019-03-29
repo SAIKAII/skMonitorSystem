@@ -1,13 +1,17 @@
 #include "../include/to_json.h"
 #include "../include/endpoint.h"
 #include "../include/websocket.h"
+#include <iostream>
 
 extern const unsigned int kMaxProcess;
 
-ToJSON::ToJSON() : procs_info_(kMaxProcess){}
+ToJSON::ToJSON() : procs_info_(kMaxProcess){
+  procs_info_.clear();
+}
 
 void ToJSON::set_overallinfo(OverallInfo &overallinfo){
   overallinfo_ = overallinfo;
+  std::cout << "set Total processes: "  << overallinfo.total << std::endl;
 }
 
 void ToJSON::set_processinfo(std::vector<ProcessInfo> &processinfo){
@@ -27,6 +31,7 @@ void ToJSON::data_to_json(std::shared_ptr<asio::streambuf> &write_buffer){
   stream << ", \"avg_fiftheen\":" << overallinfo_.avg_fiftheen;
 
   int proc_size = procs_info_.size();
+  std::cout << "proc num: " << proc_size << std::endl;
   int count = 0;
   stream << ",\"processinfo\":[";
   for(auto proc : procs_info_){

@@ -20,6 +20,7 @@ private:
   void read_host_cpu_jiffies(unsigned int &cpu);
   void read_procs_cpu_jiffies(bool first_time);
 
+  unsigned char cpu_num_;
   DIR *p_dir_;
   std::vector<ProcessInfo> procs_info_;
   std::vector<unsigned int> procs_cpu_time_;

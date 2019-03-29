@@ -5,13 +5,14 @@ void Handler::handler_init(){
     std::string filename = "www/";
     std::string path = connection->path_match_[1];
     // 防止使用".."来访问www/目录外的内容
-    std::size_t last_pos = path.rfind('.');
+    // std::size_t last_pos = path.rfind('.');
     std::size_t current_pos = 0;
     std::size_t pos;
-    while((pos = path.find('.', current_pos)) != std::string::npos && pos != last_pos){
+    while((pos = path.find('.', current_pos)) != std::string::npos && path[pos+1] == '.'){
+    // while((pos = path.find('.', current_pos)) != std::string::npos && pos != last_pos){
       current_pos = pos;
       path.erase(pos, 1);
-      --last_pos;
+      // --last_pos;
     }
 
     filename += path;
@@ -21,6 +22,7 @@ void Handler::handler_init(){
         filename += '/';
       filename += "index.html";
     }
+    std::cout << "filename: " << filename << std::endl;
     ifs.open(filename);
 
     if(ifs){
