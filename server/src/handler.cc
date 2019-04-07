@@ -1,7 +1,7 @@
 #include "../include/handler.h"
 
 void Handler::handler_init(){
-    resource_[std::string("^/?(.*)$")][std::string("GET")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
+    resource_[std::string("^/?(.*)$")][std::string("GET")] = [](std::ostream &response, std::shared_ptr<Connection> connection, bool &read_https){
     std::string filename = "www/";
     std::string path = connection->path_match_[1];
     // 防止使用".."来访问www/目录外的内容

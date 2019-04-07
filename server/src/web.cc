@@ -165,14 +165,18 @@ void Web::respond(std::shared_ptr<Connection> connection){
       if(res_it.second.count(connection->method_) > 0){
         connection->path_match_ = std::move(sm_res);
 
+        bool read_https = false;
         auto write_buffer = std::make_shared<asio::streambuf>();
         std::ostream response(write_buffer.get());
-        res_it.second[connection->method_](response, connection);
+        res_it.second[connection->method_](response, connection, read_https);
         std::cout << "HTTPS write" << std::endl;
 
-        asio::async_write(*connection->socket_, *write_buffer, [this, connection](const error_code &ec, std::size_t /* bytes_transferred */){
+        asio::async_write(*connection->socket_, *write_buffer, [this, connection, read_https](const error_code &ec, std::size_t /* bytes_transferred */){
           if(!ec){
-            keep_alive_connect(connection);
+            if(read_https)
+              keep_alive_connect(connection);
+            else
+              read_and_parse(connection);
             std::cout << "HTTPS write complete!" << std::endl;
           }
         });

@@ -7,7 +7,7 @@
 #include <string>
 #include <fstream>
 
-using resource_type = std::map<std::string, std::unordered_map<std::string, std::function<void(std::ostream&, std::shared_ptr<Connection>)>>>;
+using resource_type = std::map<std::string, std::unordered_map<std::string, std::function<void(std::ostream&, std::shared_ptr<Connection>, bool&)>>>;
 
 class Handler{
 public:
