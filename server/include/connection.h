@@ -3,9 +3,9 @@
 
 #include "utility.h"
 #include "message.h"
-// #include "websocket.h"
 #include <memory>
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 #include <string>
 #include <unordered_map>
 #include <regex>
@@ -14,19 +14,24 @@
 #include <atomic>
 #include <utility>
 
+#include <iostream>
+
 namespace asio = boost::asio;
 using error_code = boost::system::error_code;
+using SocketSSL = boost::asio::ssl::stream<boost::asio::ip::tcp::socket>;
 
-class WebSocket;
+class WebSocketSSL;
+class Web;
 
 class Connection : public std::enable_shared_from_this<Connection>{
-  friend class WebSocket;
+  friend class WebSocketSSL;
+  friend class Web;
 public:
-  Connection(asio::io_service &io_service) noexcept : socket_(new asio::ip::tcp::socket(io_service)), closed_(false){}
+  Connection(asio::io_service &io_service, asio::ssl::context &ctx) noexcept : socket_(new SocketSSL(io_service, ctx)), closed_(false){}
   std::string method_, path_, query_string_, http_version_;
   CaseInsensitiveMultimap header_; // header有可能多个同样的
   asio::ip::tcp::endpoint remote_endpoint_;
-  std::unique_ptr<asio::ip::tcp::socket> socket_;
+  std::unique_ptr<SocketSSL> socket_;
   std::smatch path_match_;
   asio::streambuf read_buffer_;
   std::shared_ptr<Message> fragmented_message_;
@@ -49,12 +54,12 @@ public:
     std::unique_lock<std::mutex> lock(socket_close_mutex_);
     socket_->lowest_layer().shutdown(asio::ip::tcp::socket::shutdown_both, ec);
     socket_->lowest_layer().close(ec);
+    std::cout << "关闭TCP" << std::endl;
   }
 
 private:
   std::mutex socket_close_mutex_;
   std::atomic<bool> closed_;
-
 };
 
 #endif

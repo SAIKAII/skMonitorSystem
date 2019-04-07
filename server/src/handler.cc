@@ -32,7 +32,10 @@ void Handler::handler_init(){
       ifs.seekg(0, std::ios::beg);
 
       // 组建响应
-      response << "HTTP/1.1 200 OK\r\nContent-Length: " << length << "\r\n\r\n" << ifs.rdbuf();
+      response << "HTTP/1.1 200 OK\r\n";
+      if(std::stof(connection->http_version_) > 1.05) // 持久连接
+        response << "Connection: keep-alive\r\n";
+      response << "Content-Length: " << length << "\r\n\r\n" << ifs.rdbuf();
 
       ifs.close();
     }else{

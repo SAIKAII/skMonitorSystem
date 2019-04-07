@@ -1,55 +1,14 @@
-#include "../include/websocket.h"
+#include "../include/websocketSSL.h"
 #include "../include/message.h"
-#include "../include/crypto.h"
+#include "../include/endpoint.h"
 #include <regex>
 #include <array>
 #include <mutex>
 
-void WebSocket::write_handshake(std::shared_ptr<Connection> connection){
-  std::cout << "write_handshake()" << std::endl;
-  auto write_buffer = std::make_shared<asio::streambuf>();
-  static std::regex express("^/print/?$");
-  // 如果发现不是合法路径请求
-  if(!std::regex_match(connection->path_.begin(), connection->path_.end(), express)){
-    return;
-  }
-
-  if(WebSocket::generate_handshake(write_buffer, connection)){
-    asio::async_write(*connection->socket_, *write_buffer, [connection](const error_code &ec, std::size_t /*bytes_transferred*/){
-      if(!ec){
-        std::shared_ptr<WebSocket> ws = std::make_shared<WebSocket>(connection);
-        ws->connection_open(ws);
-        ws->read_message();
-      }else{
-        return;
-      }
-    });
-  }
-}
-
-bool WebSocket::generate_handshake(std::shared_ptr<asio::streambuf> &write_buffer, std::shared_ptr<Connection> connection){
-  std::cout << "generate_handshake()" << std::endl;
-  std::ostream handshake(write_buffer.get());
-
-  auto header_it = connection->header_.find("Sec-WebSocket-Key");
-  if(header_it == connection->header_.end())
-    return false;
-
-  static auto ws_magic_string = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-  auto sha1 = Crypto::sha1(header_it->second + ws_magic_string);
-
-  handshake << "HTTP/1.1 101 Web Socket Protocl Handshake\r\n";
-  handshake << "Upgrade: websocket\r\n";
-  handshake << "Connection: Upgrade\r\n";
-  handshake << "Sec-WebSocket-Accept: " << Crypto::base64_encode(sha1) << "\r\n";
-  handshake << "\r\n";
-
-  return true;
-}
-
-void WebSocket::read_message(){
+void WebSocketSSL::read_message(){
   std::cout << "read_message()" << std::endl;
-  asio::async_read(*connection_->socket_, connection_->read_buffer_, asio::transfer_exactly(2), [this](const error_code &ec, std::size_t bytes_transferred){
+  Endpoint *endpoint = Endpoint::get_instance();
+  asio::async_read(*connection_->socket_, connection_->read_buffer_, asio::transfer_exactly(2), [this, endpoint](const error_code &ec, std::size_t bytes_transferred){
     if(!ec){
       if(bytes_transferred == 0){
         read_message();
@@ -66,7 +25,7 @@ void WebSocket::read_message(){
       if(first_bytes[1] < 128){
         const std::string reason("message from client not masked");
         send_close(1002, reason);
-        connection_close(this->shared_from_this(), 1002, reason);
+        endpoint->connection_close(this->shared_from_this(), 1002, reason);
         return;
       }
 
@@ -76,7 +35,7 @@ void WebSocket::read_message(){
 
       if(length == 126){
         // 接下来2字节是内容长度指示（超过125字节，标记为126的情况）
-        asio::async_read(*connection_->socket_, connection_->read_buffer_, asio::transfer_exactly(2), [this, fin_rsv_opcode](const error_code &ec, std::size_t /* bytes_transferred */){
+        asio::async_read(*connection_->socket_, connection_->read_buffer_, asio::transfer_exactly(2), [this, fin_rsv_opcode, endpoint](const error_code &ec, std::size_t /* bytes_transferred */){
           if(!ec){
             std::istream stream(&connection_->read_buffer_);
             std::array<unsigned char, 2> length_bytes;
@@ -89,12 +48,12 @@ void WebSocket::read_message(){
 
             read_message_content(length, fin_rsv_opcode);
           }else{
-            connection_error(this->shared_from_this(), ec);
+            endpoint->connection_error(this->shared_from_this(), ec);
           }
         });
       }else if(length == 127){
         // 接下来8字节是内容长度指示（超过125字节，标记为127的情况）
-        asio::async_read(*connection_->socket_, connection_->read_buffer_, asio::transfer_exactly(8), [this, fin_rsv_opcode](const error_code &ec, std::size_t /* bytes_transferred */){
+        asio::async_read(*connection_->socket_, connection_->read_buffer_, asio::transfer_exactly(8), [this, fin_rsv_opcode, endpoint](const error_code &ec, std::size_t /* bytes_transferred */){
           if(!ec){
             std::istream stream(&connection_->read_buffer_);
 
@@ -108,19 +67,20 @@ void WebSocket::read_message(){
 
             read_message_content(length, fin_rsv_opcode);
           }else
-            connection_error(this->shared_from_this(), ec);
+            endpoint->connection_error(this->shared_from_this(), ec);
         });
       }else
         read_message_content(length, fin_rsv_opcode);
     }else
-      connection_error(this->shared_from_this(), ec);
+      endpoint->connection_error(this->shared_from_this(), ec);
   });
 }
 
-void WebSocket::read_message_content(std::size_t length, unsigned char fin_rsv_opcode){
+void WebSocketSSL::read_message_content(std::size_t length, unsigned char fin_rsv_opcode){
   std::cout << "read_message_content()" << std::endl;
+  Endpoint *endpoint = Endpoint::get_instance();
   // 这里的4是代表mask大小
-  asio::async_read(*connection_->socket_, connection_->read_buffer_, asio::transfer_exactly(4 + length), [this, length, fin_rsv_opcode](const error_code &ec, std::size_t /* bytes_transferred */){
+  asio::async_read(*connection_->socket_, connection_->read_buffer_, asio::transfer_exactly(4 + length), [this, length, fin_rsv_opcode, endpoint](const error_code &ec, std::size_t /* bytes_transferred */){
     if(!ec){
       std::istream istream(&connection_->read_buffer_);
 
@@ -157,13 +117,10 @@ void WebSocket::read_message_content(std::size_t length, unsigned char fin_rsv_o
 
         auto reason = message->string();
         send_close(status, reason);
-        connection_close(this->shared_from_this(), status, reason);
+        endpoint->connection_close(this->shared_from_this(), status, reason);
       }else if((fin_rsv_opcode & 0x80) == 0){ // 如果不是最后的分片
         this->read_message();
       }else{ // 其他情况一律按最后一个分片处理，非关闭连接
-        if(endpoint_->on_message)
-          endpoint_->on_message(this->shared_from_this());
-
         connection_->fragmented_message_ = nullptr;
 
         this->read_message();
@@ -172,7 +129,7 @@ void WebSocket::read_message_content(std::size_t length, unsigned char fin_rsv_o
   });
 }
 
-void WebSocket::send_close(int status, const std::string &reason){
+void WebSocketSSL::send_close(int status, const std::string &reason){
   std::cout << "send_close()" << std::endl;
   if(connection_->closed_)
     return;
@@ -190,7 +147,7 @@ void WebSocket::send_close(int status, const std::string &reason){
 }
 
 // 向发送指定数据
-void WebSocket::send(const std::shared_ptr<asio::streambuf> &send_stream, unsigned char fin_rsv_opcode){
+void WebSocketSSL::send(const std::shared_ptr<asio::streambuf> &send_stream, unsigned char fin_rsv_opcode){
   std::cout << "send()" << std::endl;
   if(connection_->closed_)
     return;
@@ -209,7 +166,7 @@ void WebSocket::send(const std::shared_ptr<asio::streambuf> &send_stream, unsign
   });
 }
 
-void WebSocket::create_header(std::ostream &stream, const std::shared_ptr<asio::streambuf> &send_stream, unsigned char fin_rsv_opcode){
+void WebSocketSSL::create_header(std::ostream &stream, const std::shared_ptr<asio::streambuf> &send_stream, unsigned char fin_rsv_opcode){
   std::cout << "create_header" << std::endl;
   std::size_t length = send_stream->size();
 
@@ -228,37 +185,4 @@ void WebSocket::create_header(std::ostream &stream, const std::shared_ptr<asio::
       stream.put((static_cast<unsigned long long>(length) >> (8 * c)) % 256);
   }else
     stream.put(static_cast<char>(length));
-}
-
-void WebSocket::connection_open(std::shared_ptr<WebSocket> ws){
-  std::cout << "connection_open()" << std::endl;
-  {
-    std::unique_lock<std::mutex> lock(endpoint_->connections_mutex_);
-    endpoint_->connections_.insert(ws);
-  }
-
-  if(endpoint_->on_open)
-    endpoint_->on_open(ws);
-}
-
-void WebSocket::connection_close(std::shared_ptr<WebSocket> ws, int status, const std::string reason){
-  std::cout << "connection_close()" << std::endl;
-  {
-    std::unique_lock<std::mutex> lock(endpoint_->connections_mutex_);
-    endpoint_->connections_.erase(ws);
-  }
-
-  if(endpoint_->on_close)
-    endpoint_->on_close(ws, status, reason);
-}
-
-void WebSocket::connection_error(std::shared_ptr<WebSocket> ws, const error_code &ec){
-  std::cout << "connection_error" << std::endl;
-  {
-    std::unique_lock<std::mutex> lock(endpoint_->connections_mutex_);
-    endpoint_->connections_.erase(ws);
-  }
-
-  if(endpoint_->on_error)
-    endpoint_->on_error(ws, ec);
 }

@@ -1,6 +1,6 @@
 #include "../include/to_json.h"
 #include "../include/endpoint.h"
-#include "../include/websocket.h"
+#include "../include/websocketSSL.h"
 #include <iostream>
 
 extern const unsigned int kMaxProcess;
@@ -45,8 +45,8 @@ void ToJSON::data_to_json(std::shared_ptr<asio::streambuf> &write_buffer){
 }
 
 void ToJSON::notify_send_data(){
-  Endpoint *e_ptr = Endpoint::get_instance();
-  std::unordered_set<std::shared_ptr<WebSocket>> connections = e_ptr->get_connections();
+  Endpoint *endpoint = Endpoint::get_instance();
+  std::unordered_set<std::shared_ptr<WebSocketSSL>> connections = endpoint->get_connections();
   if(connections.empty())
     return;
 

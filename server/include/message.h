@@ -1,16 +1,15 @@
 #ifndef skMNTSYS_INCLUDE_MESSAGE_H_
 #define skMNTSYS_INCLUDE_MESSAGE_H_
 
-// #include "websocket.h"
 #include <iostream>
 #include <boost/asio.hpp>
 #include <string>
 #include <ios>
 
-class WebSocket;
+class WebSocketSSL;
 
 class Message : public std::istream{
-  friend class WebSocket;
+  friend class WebSocketSSL;
 public:
   unsigned char fin_rsv_opcode_;
 

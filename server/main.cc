@@ -6,11 +6,12 @@
 #include <ctime>
 #include <iostream>
 #include <thread>
+#include <memory>
 
 int main(){
   Handler *handler = Handler::get_instance();
   handler->handler_init();
-  Web web(80);
+  Web web(443, "server.crt", "server.key");
   std::thread t([](){
     GetInfo get_info;
     ToJSON to_json;

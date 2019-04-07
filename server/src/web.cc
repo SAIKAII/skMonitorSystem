@@ -1,4 +1,6 @@
 #include "../include/web.h"
+#include "../include/crypto.h"
+#include "../include/handler.h"
 #include <utility>
 
 void Web::start(){
@@ -31,24 +33,24 @@ void Web::accept_and_run(){
     io_service_->reset();
 
   io_service_->run();
-  std::cout << "run complete!" << std::endl;
 }
 
 void Web::accept(){
-  std::shared_ptr<Connection> connection(new Connection(*io_service_));
+  std::shared_ptr<Connection> connection(new Connection(*io_service_, context_));
 
-  acceptor_->async_accept(*connection->socket_, [this, connection](const error_code &ec){
-    if(ec != asio::error::operation_aborted){
-      std::cout << "accept()" << std::endl;
+  acceptor_->async_accept(connection->socket_->lowest_layer(), [this, connection](const error_code &ec){
+    if(ec != asio::error::operation_aborted)
       accept();
-    }
 
     if(!ec){
       // 不使用nagle算法
-      asio::ip::tcp::no_delay option(true);
-      connection->socket_->set_option(option);
+      // asio::ip::tcp::no_delay option(true);
+      // connection->socket_->set_option(option);
 
-      read_and_parse(connection);
+      connection->socket_->async_handshake(asio::ssl::stream_base::server, [this, connection](const error_code &ec){
+        if(!ec)
+          read_and_parse(connection);
+      });
     }
   });
 }
@@ -56,27 +58,127 @@ void Web::accept(){
 void Web::read_and_parse(std::shared_ptr<Connection> connection){
   connection->read_remote_endpoint();
 
-  asio::async_read_until(*connection->socket_, connection->read_buffer_, "\r\n\r\n", [this, connection](const error_code &ec, std::size_t /*bytes_transferred 这个用不到*/){
+  asio::async_read_until(*connection->socket_, connection->read_buffer_, "\r\n\r\n", [this, connection](const error_code &ec, std::size_t bytes_transferred){
     if(!ec){
       std::istream stream(&connection->read_buffer_);
       if(RequestMessage::parse(stream, connection->method_, connection->path_, connection->query_string_, connection->http_version_, connection->header_)){
         if(connection->header_.count("Sec-WebSocket-Key") > 0){
           std::cout << "Web Socket Request" << std::endl;
           // 拥有这个头部，说明是Web Socket的连接请求
-          WebSocket::write_handshake(connection);
+          write_handshake(connection);
         }
         else{
-          std::cout << "HTTP Request" << std::endl;
-          // 否则是普通的HTTP请求
-          auto http = std::make_shared<HTTP>(connection);
-          http->respond();
+          http_resolve(connection, bytes_transferred);
         }
-      }else{
-        std::cout << "Parse failed!" << std::endl;
       }
-
     }
   });
+}
+
+void Web::http_resolve(std::shared_ptr<Connection> connection, std::size_t bytes_transferred){
+  std::cout << "HTTPS Request" << std::endl;
+  if(connection->header_.count("Content-Length") > 0){
+    std::size_t total = connection->read_buffer_.size();
+    std::size_t num_addtional_bytes = total - bytes_transferred;
+
+    asio::async_read(*connection->socket_, connection->read_buffer_,
+      asio::transfer_exactly(std::stoull(connection->header_.find("Content-Length")->second)-num_addtional_bytes), [this, connection](const error_code &ec, std::size_t /* bytes_transferred */){
+      // 普通的HTTP请求
+      if(!ec)
+        respond(connection);
+    });
+  }else
+    respond(connection);
+}
+
+void Web::keep_alive_connect(std::shared_ptr<Connection> connection){
+  std::cout << "Keep alive" << std::endl;
+  asio::async_read(*connection->socket_, connection->read_buffer_, [this, connection](const error_code &ec, std::size_t bytes_transferred){
+    if(!ec){
+      if(0 == bytes_transferred){
+        connection->close();
+        return;
+      }
+      std::istream stream(&connection->read_buffer_);
+      if(RequestMessage::parse(stream, connection->method_, connection->path_, connection->query_string_, connection->http_version_, connection->header_))
+        http_resolve(connection, bytes_transferred);
+      else{
+        connection->close();
+        return;
+      }
+    }else{
+      connection->close();
+      return;
+    }
+  });
+}
+
+void Web::write_handshake(std::shared_ptr<Connection> connection){
+  std::cout << "write_handshake()" << std::endl;
+  auto write_buffer = std::make_shared<asio::streambuf>();
+  static std::regex express("^/print/?$");
+  // 如果发现不是合法路径请求
+  if(!std::regex_match(connection->path_.begin(), connection->path_.end(), express)){
+    return;
+  }
+
+  if(generate_handshake(write_buffer, connection)){
+    asio::async_write(*connection->socket_, *write_buffer, [this, connection](const error_code &ec, std::size_t /*bytes_transferred*/){
+      if(!ec){
+        std::shared_ptr<WebSocketSSL> wss = std::make_shared<WebSocketSSL>(connection);
+        Endpoint *endpoint = Endpoint::get_instance();
+        endpoint->connection_open(wss);
+        wss->read_message();
+      }else{
+        return;
+      }
+    });
+  }
+}
+
+bool Web::generate_handshake(std::shared_ptr<asio::streambuf> &write_buffer, std::shared_ptr<Connection> connection){
+  std::cout << "generate_handshake()" << std::endl;
+  std::ostream handshake(write_buffer.get());
+
+  auto header_it = connection->header_.find("Sec-WebSocket-Key");
+  if(header_it == connection->header_.end())
+    return false;
+
+  static auto wss_magic_string = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+  auto sha1 = Crypto::sha1(header_it->second + wss_magic_string);
+
+  handshake << "HTTP/1.1 101 Web Socket Protocl Handshake\r\n";
+  handshake << "Upgrade: websocket\r\n";
+  handshake << "Connection: Upgrade\r\n";
+  handshake << "Sec-WebSocket-Accept: " << Crypto::base64_encode(sha1) << "\r\n";
+  handshake << "\r\n";
+
+  return true;
+}
+
+void Web::respond(std::shared_ptr<Connection> connection){
+  Handler *handler = Handler::get_instance();
+  for(auto res_it : handler->resource_){
+    std::regex express(res_it.first);
+    std::smatch sm_res;
+    if(std::regex_match(connection->path_, sm_res, express)){
+      if(res_it.second.count(connection->method_) > 0){
+        connection->path_match_ = std::move(sm_res);
+
+        auto write_buffer = std::make_shared<asio::streambuf>();
+        std::ostream response(write_buffer.get());
+        res_it.second[connection->method_](response, connection);
+        std::cout << "HTTPS write" << std::endl;
+
+        asio::async_write(*connection->socket_, *write_buffer, [this, connection](const error_code &ec, std::size_t /* bytes_transferred */){
+          if(!ec){
+            keep_alive_connect(connection);
+            std::cout << "HTTPS write complete!" << std::endl;
+          }
+        });
+      }
+    }
+  }
 }
 
 void Web::stop_accept() noexcept{
