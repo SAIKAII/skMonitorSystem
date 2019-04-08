@@ -1,7 +1,9 @@
 #include "../include/web.h"
 #include "../include/crypto.h"
 #include "../include/handler.h"
+#include "../include/authentication.h"
 #include <utility>
+#include <boost/regex.hpp>
 
 void Web::start(){
   bind();
@@ -58,12 +60,11 @@ void Web::accept(){
 void Web::read_and_parse(std::shared_ptr<Connection> connection){
   connection->read_remote_endpoint();
 
-  asio::async_read_until(*connection->socket_, connection->read_buffer_, "\r\n\r\n", [this, connection](const error_code &ec, std::size_t bytes_transferred){
+  asio::async_read_until(*connection->socket_, connection->read_buffer_, boost::regex("(\\r\\n\\r\\n)"), [this, connection](const error_code &ec, std::size_t bytes_transferred){
     if(!ec){
       std::istream stream(&connection->read_buffer_);
-      if(RequestMessage::parse(stream, connection->method_, connection->path_, connection->query_string_, connection->http_version_, connection->header_)){
+      if(RequestMessage::parse(stream, connection->method_, connection->path_, connection->query_string_, connection->http_version_, connection->header_, connection->token_)){
         if(connection->header_.count("Sec-WebSocket-Key") > 0){
-          std::cout << "Web Socket Request" << std::endl;
           // 拥有这个头部，说明是Web Socket的连接请求
           write_handshake(connection);
         }
@@ -71,7 +72,8 @@ void Web::read_and_parse(std::shared_ptr<Connection> connection){
           http_resolve(connection, bytes_transferred);
         }
       }
-    }
+    }else
+      connection->close();
   });
 }
 
@@ -79,28 +81,25 @@ void Web::http_resolve(std::shared_ptr<Connection> connection, std::size_t bytes
   std::cout << "HTTPS Request" << std::endl;
   if(connection->header_.count("Content-Length") > 0){
     std::size_t total = connection->read_buffer_.size();
-    std::size_t num_addtional_bytes = total - bytes_transferred;
 
     asio::async_read(*connection->socket_, connection->read_buffer_,
-      asio::transfer_exactly(std::stoull(connection->header_.find("Content-Length")->second)-num_addtional_bytes), [this, connection](const error_code &ec, std::size_t /* bytes_transferred */){
+      asio::transfer_exactly(std::stoull(connection->header_.find("Content-Length")->second) - total), [this, connection](const error_code &ec, std::size_t /* bytes_transferred */){
       // 普通的HTTP请求
       if(!ec)
         respond(connection);
     });
-  }else
+  }else{
     respond(connection);
+  }
 }
 
 void Web::keep_alive_connect(std::shared_ptr<Connection> connection){
   std::cout << "Keep alive" << std::endl;
   asio::async_read(*connection->socket_, connection->read_buffer_, [this, connection](const error_code &ec, std::size_t bytes_transferred){
     if(!ec){
-      if(0 == bytes_transferred){
-        connection->close();
-        return;
-      }
+
       std::istream stream(&connection->read_buffer_);
-      if(RequestMessage::parse(stream, connection->method_, connection->path_, connection->query_string_, connection->http_version_, connection->header_))
+      if(RequestMessage::parse(stream, connection->method_, connection->path_, connection->query_string_, connection->http_version_, connection->header_, connection->token_))
         http_resolve(connection, bytes_transferred);
       else{
         connection->close();
@@ -114,7 +113,6 @@ void Web::keep_alive_connect(std::shared_ptr<Connection> connection){
 }
 
 void Web::write_handshake(std::shared_ptr<Connection> connection){
-  std::cout << "write_handshake()" << std::endl;
   auto write_buffer = std::make_shared<asio::streambuf>();
   static std::regex express("^/print/?$");
   // 如果发现不是合法路径请求
@@ -137,7 +135,6 @@ void Web::write_handshake(std::shared_ptr<Connection> connection){
 }
 
 bool Web::generate_handshake(std::shared_ptr<asio::streambuf> &write_buffer, std::shared_ptr<Connection> connection){
-  std::cout << "generate_handshake()" << std::endl;
   std::ostream handshake(write_buffer.get());
 
   auto header_it = connection->header_.find("Sec-WebSocket-Key");
@@ -157,6 +154,7 @@ bool Web::generate_handshake(std::shared_ptr<asio::streambuf> &write_buffer, std
 }
 
 void Web::respond(std::shared_ptr<Connection> connection){
+  std::cout << "Method: " << connection->method_ << std::endl;
   Handler *handler = Handler::get_instance();
   for(auto res_it : handler->resource_){
     std::regex express(res_it.first);
@@ -173,9 +171,6 @@ void Web::respond(std::shared_ptr<Connection> connection){
 
         asio::async_write(*connection->socket_, *write_buffer, [this, connection, read_https](const error_code &ec, std::size_t /* bytes_transferred */){
           if(!ec){
-            if(read_https)
-              keep_alive_connect(connection);
-            else
               read_and_parse(connection);
             std::cout << "HTTPS write complete!" << std::endl;
           }

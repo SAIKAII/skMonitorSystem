@@ -11,7 +11,6 @@ ToJSON::ToJSON() : procs_info_(kMaxProcess){
 
 void ToJSON::set_overallinfo(OverallInfo &overallinfo){
   overallinfo_ = overallinfo;
-  std::cout << "set Total processes: "  << overallinfo.total << std::endl;
 }
 
 void ToJSON::set_processinfo(std::vector<ProcessInfo> &processinfo){

@@ -17,7 +17,6 @@ int main(){
     ToJSON to_json;
     while(true){
       std::this_thread::sleep_for(std::chrono::seconds(3));
-      std::cout << "wake up!" << std::endl;
       get_info.get_info(to_json);
     }
   });

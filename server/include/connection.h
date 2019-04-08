@@ -35,6 +35,7 @@ public:
   std::smatch path_match_;
   asio::streambuf read_buffer_;
   std::shared_ptr<Message> fragmented_message_;
+  std::string token_;
 
   std::string remote_endpoint_address() noexcept{
     try{

@@ -1,37 +1,14 @@
 <!DOCTYPE html>
 <html>
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<!-- <script src="./jquery-3.2.1.min.js"></script> -->
-<title>WebSocket Test</title>
-</head>
-<body>
-<script>
-var ws;
-window.onload=function(){
-  ws=new WebSocket("ws://saikaii.ngrok.xiaomiqiu.cn:80/print");
-  ws.onmessage=function(evt){
-    // console.log(evt.data);
-    var content = document.getElementById('div_msg');
-    content.clear;
-
-    var json = eval('(' + evt.data + ')');
-    var str = "<table border='1'><tr><th>状态</th><th>进程id</th><th>进程父id</th><th>用户id</th><th>物理内存(KB)</th><th>虚拟内存(KB)</th><th>cpu(%)</th><th>内存占比(%)</th><th>命令</th></tr>";
-    for(i in json.processinfo){
-      str = str + "<tr><td>" + json.processinfo[i].state + "</td><td>" + json.processinfo[i].pid + "</td><td>" + json.processinfo[i].ppid + "</td><td>" + json.processinfo[i].userid + "</td><td>"  + json.processinfo[i].pmem + "</td><td>";
-      str = str + json.processinfo[i].vmem + "</td><td>" + json.processinfo[i].cpu + "</td><td>" + json.processinfo[i].mem + "</td><td>" + json.processinfo[i].cmdline + "</td></tr>";
-    }
-    str += "</table>";
-    content.innerHTML = str;
-  };
-  ws.onopen=function(evt){
-    // ws.send("Hello");
-  }
-}
-window.onclose=function(){
-  ws.close();
-}
-</script>
-<div id = "div_msg"></div>
-</body>
+  <head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <title>Login</title>
+  </head>
+  <body>
+    <form action="login.action" method="POST">
+      用户名:<input type="text" name="username"/><br/>
+      密码:<input type="password" name="pwd"/><br/>
+      <input type="submit" value="登录"/>
+    </form>
+  </body>
 </html>

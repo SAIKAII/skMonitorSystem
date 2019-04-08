@@ -38,7 +38,7 @@ using CaseInsensitiveMultimap = std::unordered_multimap<std::string, std::string
 
 class RequestMessage{
 public:
-  static bool parse(std::istream &stream, std::string &method, std::string &path, std::string &query_string, std::string &version, CaseInsensitiveMultimap &header) noexcept{
+  static bool parse(std::istream &stream, std::string &method, std::string &path, std::string &query_string, std::string &version, CaseInsensitiveMultimap &header, std::string &token) noexcept{
     header.clear();
     std::string line;
     std::getline(stream, line);
@@ -60,14 +60,25 @@ public:
 
       bool matched;
       regex_line = "^([^:]*): ?(.*)$";
+      header.clear();
       do{
         std::getline(stream, line);
+        std::cout << line << std::endl;
         line.pop_back();
         matched = std::regex_match(line, sub_match, regex_line);
         if(true == matched){
           header.emplace(std::make_pair(sub_match[1], sub_match[2]));
         }
       }while(true == matched);
+
+      // 获取Cookie
+      auto it = header.find("Cookie");
+      if(header.end() != it){
+        std::string tk(it->second);
+        auto start = tk.find("=", tk.find("my_cookie")) + 1;
+        auto end = tk.find(";", start);
+        token = end != std::string::npos ? std::string(tk, start, end-start) : std::string(tk, start);
+      }
     }else{
       return false;
     }
