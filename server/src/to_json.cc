@@ -3,9 +3,17 @@
 #include "../include/websocketSSL.h"
 #include <iostream>
 
-extern const unsigned int kMaxProcess;
+ToJSON::SortMethod ToJSON::sort_method_ = ToJSON::NORMAL;
 
-ToJSON::ToJSON() : procs_info_(kMaxProcess){
+bool cmp_cpu_first(const ProcessInfo &lhs, const ProcessInfo &rhs){
+  return lhs.cpu > rhs.cpu;
+}
+
+bool cmp_mem_first(const ProcessInfo &lhs, const ProcessInfo &rhs){
+  return lhs.mem > rhs.mem;
+}
+
+ToJSON::ToJSON(){
   procs_info_.clear();
 }
 
@@ -13,8 +21,18 @@ void ToJSON::set_overallinfo(OverallInfo &overallinfo){
   overallinfo_ = overallinfo;
 }
 
-void ToJSON::set_processinfo(std::vector<ProcessInfo> &processinfo){
+void ToJSON::set_processinfo(std::list<ProcessInfo> &processinfo){
   procs_info_.swap(processinfo);
+  switch (sort_method_) {
+    case CPU_FIRST:
+      procs_info_.sort(cmp_cpu_first);
+      break;
+    case MEM_FIRST:
+      procs_info_.sort(cmp_mem_first);
+      break;
+    default:
+      break;
+  }
 }
 
 void ToJSON::data_to_json(std::shared_ptr<asio::streambuf> &write_buffer){
@@ -30,7 +48,6 @@ void ToJSON::data_to_json(std::shared_ptr<asio::streambuf> &write_buffer){
   stream << ", \"avg_fiftheen\":" << overallinfo_.avg_fiftheen;
 
   int proc_size = procs_info_.size();
-  std::cout << "proc num: " << proc_size << std::endl;
   int count = 0;
   stream << ",\"processinfo\":[";
   for(auto proc : procs_info_){

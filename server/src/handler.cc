@@ -1,5 +1,6 @@
 #include "../include/handler.h"
 #include "../include/authentication.h"
+#include "../include/to_json.h"
 
 void read_file_and_generate_response(std::ostream &response, std::shared_ptr<Connection> connection, const std::string &filename, std::string cookie){
   std::ifstream ifs(filename);
@@ -27,7 +28,7 @@ void read_file_and_generate_response(std::ostream &response, std::shared_ptr<Con
 }
 
 void Handler::handler_init(){
-    resource_[std::string("^/?(.*)$")][std::string("GET")] = [](std::ostream &response, std::shared_ptr<Connection> connection, bool &read_https){
+    resource_[std::string("^/?(.*)$")][std::string("GET")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
     std::string filename = "www/";
     std::string path = connection->path_match_[1];
     // 防止使用".."来访问www/目录外的内容
@@ -54,15 +55,11 @@ void Handler::handler_init(){
       filename = "www/index.html";
     }
     std::cout << "filename: " << filename << std::endl;
-    if(filename.rfind("first.html") == std::string::npos)
-      read_https = true;
 
-    std::cout << "read https: " << read_https << std::endl;
     read_file_and_generate_response(response, connection, filename, std::string());
   };
 
-  resource_[std::string("^/?(.*).action$")][std::string("POST")] = [](std::ostream &response, std::shared_ptr<Connection> connection, bool &read_https){
-    std::cout << "POST method" << std::endl;
+  resource_[std::string("^/?login.action$")][std::string("POST")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
     std::istream is(&connection->read_buffer_);
     std::string username, pwd, username_pwd;
 
@@ -90,6 +87,43 @@ void Handler::handler_init(){
 
     std::string content = "You have no right to access.";
     response << "HTTP/1.1 403 Forbidden\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
-    read_https = true;
+  };
+
+  resource_[std::string("^/?power_change.action$")][std::string("POST")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
+    if(!Authentication::auth_token(connection->token_)){
+      std::string content = "You have no right to do this.";
+      response << "HTTP/1.1 403 Forbidden\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
+      return;
+    }
+
+    std::istream is(&connection->read_buffer_);
+    std::string method;
+
+    std::getline(is, method);
+    std::string::size_type start, end;
+    if((start = method.find("method")) == std::string::npos){
+      std::string content = "Syntax fail.";
+      response << "HTTP/1.1 400 Bad request\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
+      return;
+    }
+
+    start = method.find("=") + 1;
+    end = method.find("&", start);
+
+    std::string m = end != std::string::npos ? std::string(method, start, end-start) : std::string(method, start);
+
+    if("cpu_first" == m){
+      std::cout << "CPU first" << std::endl;
+      ToJSON::sort_method_ = ToJSON::CPU_FIRST;
+    }else if("mem_first" == m){
+      std::cout << "MEM first" << std::endl;
+      ToJSON::sort_method_ = ToJSON::MEM_FIRST;
+    }else{
+      std::cout << "Normal" << std::endl;
+      ToJSON::sort_method_ = ToJSON::NORMAL;
+    }
+
+    std::string content = "Request success.";
+    response << "HTTP/1.1 200 OK\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
   };
 }

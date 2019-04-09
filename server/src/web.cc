@@ -3,7 +3,6 @@
 #include "../include/handler.h"
 #include "../include/authentication.h"
 #include <utility>
-#include <boost/regex.hpp>
 
 void Web::start(){
   bind();
@@ -60,7 +59,7 @@ void Web::accept(){
 void Web::read_and_parse(std::shared_ptr<Connection> connection){
   connection->read_remote_endpoint();
 
-  asio::async_read_until(*connection->socket_, connection->read_buffer_, boost::regex("(\\r\\n\\r\\n)"), [this, connection](const error_code &ec, std::size_t bytes_transferred){
+  asio::async_read_until(*connection->socket_, connection->read_buffer_, "\r\n\r\n", [this, connection](const error_code &ec, std::size_t bytes_transferred){
     if(!ec){
       std::istream stream(&connection->read_buffer_);
       if(RequestMessage::parse(stream, connection->method_, connection->path_, connection->query_string_, connection->http_version_, connection->header_, connection->token_)){
@@ -91,25 +90,6 @@ void Web::http_resolve(std::shared_ptr<Connection> connection, std::size_t bytes
   }else{
     respond(connection);
   }
-}
-
-void Web::keep_alive_connect(std::shared_ptr<Connection> connection){
-  std::cout << "Keep alive" << std::endl;
-  asio::async_read(*connection->socket_, connection->read_buffer_, [this, connection](const error_code &ec, std::size_t bytes_transferred){
-    if(!ec){
-
-      std::istream stream(&connection->read_buffer_);
-      if(RequestMessage::parse(stream, connection->method_, connection->path_, connection->query_string_, connection->http_version_, connection->header_, connection->token_))
-        http_resolve(connection, bytes_transferred);
-      else{
-        connection->close();
-        return;
-      }
-    }else{
-      connection->close();
-      return;
-    }
-  });
 }
 
 void Web::write_handshake(std::shared_ptr<Connection> connection){
@@ -163,16 +143,14 @@ void Web::respond(std::shared_ptr<Connection> connection){
       if(res_it.second.count(connection->method_) > 0){
         connection->path_match_ = std::move(sm_res);
 
-        bool read_https = false;
         auto write_buffer = std::make_shared<asio::streambuf>();
         std::ostream response(write_buffer.get());
-        res_it.second[connection->method_](response, connection, read_https);
+        res_it.second[connection->method_](response, connection);
         std::cout << "HTTPS write" << std::endl;
 
-        asio::async_write(*connection->socket_, *write_buffer, [this, connection, read_https](const error_code &ec, std::size_t /* bytes_transferred */){
+        asio::async_write(*connection->socket_, *write_buffer, [this, connection](const error_code &ec, std::size_t /* bytes_transferred */){
           if(!ec){
               read_and_parse(connection);
-            std::cout << "HTTPS write complete!" << std::endl;
           }
         });
       }

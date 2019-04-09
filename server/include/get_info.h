@@ -4,6 +4,7 @@
 #include "to_json.h"
 #include "resource_info.h"
 #include <dirent.h>
+#include <list>
 #include <vector>
 
 class GetInfo{
@@ -22,7 +23,7 @@ private:
 
   unsigned char cpu_num_;
   DIR *p_dir_;
-  std::vector<ProcessInfo> procs_info_;
+  std::list<ProcessInfo> procs_info_;
   std::vector<unsigned int> procs_cpu_time_;
 };
 

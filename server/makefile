@@ -1,10 +1,10 @@
 VPATH = include:src
 
 OBJECTS = main.o web.o websocketSSL.o handler.o get_info.o to_json.o authentication.o
-G++ = g++ -lpthread -g -o $@ -c $<
+G++ = g++ -std=c++11 -lpthread -g -o $@ -c $<
 
 mntsys: $(OBJECTS)
-	g++ -o mntsys $(OBJECTS) -lssl -lcrypto -lpthread -lboost_regex
+	g++ -o mntsys $(OBJECTS) -std=c++11 -lssl -lcrypto -lpthread
 
 main.o: main.cc web.h handler.h get_info.h to_json.h
 	$(G++)
@@ -15,7 +15,7 @@ web.o: web.cc web.h config.h utility.h connection.h websocketSSL.h crypto.h hand
 websocketSSL.o: websocketSSL.cc websocketSSL.h connection.h message.h endpoint.h
 	$(G++)
 
-handler.o: handler.cc handler.h utility.h
+handler.o: handler.cc handler.h utility.h to_json.h
 	$(G++)
 
 get_info.o: get_info.cc get_info.h to_json.h resource_info.h

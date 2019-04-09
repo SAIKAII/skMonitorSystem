@@ -8,6 +8,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <iostream>
+
 const char *kDir = "/proc";
 const char *kOverAllInfoOfUsers = "/proc/key-users";
 const char *kOverAllInfoOfAvg = "/proc/loadavg";
@@ -37,13 +39,11 @@ const unsigned short kProcessEnd = 21;
 const unsigned short kProcessTimeStart = 13;
 const unsigned short kProcessTimeEnd = 17;
 
-GetInfo::GetInfo() : procs_info_(kMaxSlot), procs_cpu_time_(kMaxSlot){
+GetInfo::GetInfo() : procs_cpu_time_(kMaxSlot){
   if(!(p_dir_ = opendir(kDir))){
     perror("opendir:");
     exit(1);
   }
-  procs_info_.clear();
-  procs_info_.clear();
   std::ifstream fin("/proc/stat");
   std::string line;
   char str[8];
@@ -207,10 +207,9 @@ void GetInfo::get_usage(){
   read_procs_cpu_jiffies(false);
   unsigned int cpu_time = cpu2 - cpu1;
   int index = 0;
-  for(auto item : procs_cpu_time_){
-    procs_info_[index++].cpu = static_cast<double>(item) / cpu_time * cpu_num_ * 100;
+  for(auto &item : procs_info_){
+    item.cpu = static_cast<double>(procs_cpu_time_[index++]) / cpu_time * cpu_num_ * 100;
   }
-  procs_cpu_time_.clear(); // 既然已经获取所有进程的CPU占用率，就把容器清空，留做下次使用
 }
 
 void GetInfo::read_host_cpu_jiffies(unsigned int &cpu){
