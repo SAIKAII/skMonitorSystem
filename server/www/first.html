@@ -9,7 +9,7 @@
 <script>
 var ws;
 window.onload=function(){
-  // ws=new WebSocket("wss://saikaii.ngrok.xiaomiqiu.cn:443/print");
+  // ws=new WebSocket("wss://saikaii.xyz:443/print");
   wss=new WebSocket("wss://10.13.16.208:443/print");
   wss.onmessage=function(evt){
     // console.log(evt.data);
@@ -32,25 +32,33 @@ window.onload=function(){
 window.onclose=function(){
   wss.close();
 }
-function send_request(md)
-{
+function send_request(md){
   var xmlhttp;
-  if (window.XMLHttpRequest)
-  {
+  if(window.XMLHttpRequest){
     // IE7+, Firefox, Chrome, Opera, Safari 浏览器执行代码
-    xmlhttp=new XMLHttpRequest();
-  }
-  else
-  {
+    xmlhttp = new XMLHttpRequest();
+  }else{
     // IE6, IE5 浏览器执行代码
-    xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
   }
-  xmlhttp.onreadystatechange=function()
-  {
-  }
-  xmlhttp.open("POST","/power_change.action",true);
+  xmlhttp.onreadystatechange=function(){}
+  xmlhttp.open("POST", "/power_change.action",true);
   xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-  xmlhttp.send("method="+md);
+  xmlhttp.send("method=" + md);
+}
+function send_kill(md){
+  var xmlhttp;
+  if(window.XMLHttpRequest){
+    xmlhttp = new XMLHttpRequest();
+  }else{
+    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+  }
+  var pid = document.getElementById('processid');
+
+  xmlhttp.onreadystatechange = function(){}
+  xmlhttp.open("POST", "/kill_process.action", true);
+  xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  xmlhttp.send("pid=" + pid.value + "&method=" + md);
 }
 </script>
 <div id = "div_msg"></div>
@@ -60,4 +68,7 @@ function send_request(md)
 </body>
 <a href="/access_log.txt" target="_blank"><button type="button">获取访问日志</button></a>
 <a href="/run_log.txt" target="_blank"><button type="button">获取服务器运行日志</button></a>
+<input type="text" id = "processid" value="进程id"/>
+<button type="button" onclick="send_kill('normal')">正常关闭进程</button>
+<button type="button" onclick="send_kill('force')">强制关闭进程</button>
 </html>

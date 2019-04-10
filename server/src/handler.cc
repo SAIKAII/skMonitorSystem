@@ -4,6 +4,8 @@
 #include "../include/logger.h"
 #include <boost/asio.hpp>
 #include <iostream>
+#include <signal.h>
+#include <sys/types.h>
 
 void read_file_and_generate_response(std::ostream &response, std::shared_ptr<Connection> connection, const std::string &filename, std::string cookie){
   std::ifstream ifs(filename);
@@ -28,6 +30,16 @@ void read_file_and_generate_response(std::ostream &response, std::shared_ptr<Con
     std::string content = "Could not open file " + filename;
     response << "HTTP/1.1 400 Bad Request\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
   }
+}
+
+bool auth_token(std::ostream &response, std::shared_ptr<Connection> connection){
+  if(!Authentication::auth_token(connection->token_)){
+    Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->method_, connection->path_, "HTTP/"+connection->http_version_);
+    std::string content = "You have no right to do this.";
+    response << "HTTP/1.1 403 Forbidden\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
+    return false;
+  }
+  return true;
 }
 
 void Handler::handler_init(){
@@ -59,14 +71,12 @@ void Handler::handler_init(){
       pwd = end != std::string::npos ? std::string(username_pwd, start, end-start) : std::string(username_pwd, start);
     }
 
-    std::cout << "POST method" << std::endl;
     if(username == "admin" && pwd == "admin"){
       std::string token = Authentication::generator_token(username + pwd);
       connection->token_ = token;
 
       std::string filename = "www/first.html";
       read_file_and_generate_response(response, connection, filename, token);
-      std::cout << "post success!" << std::endl;
       return;
     }
 
@@ -75,13 +85,10 @@ void Handler::handler_init(){
   };
 
   resource_[std::string("^/?power_change.action$")][std::string("POST")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
-    Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->token_, connection->method_, connection->path_, "HTTP/"+connection->http_version_);
-    if(!Authentication::auth_token(connection->token_)){
-      std::string content = "You have no right to do this.";
-      response << "HTTP/1.1 403 Forbidden\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
+    if(!auth_token(response, connection))
       return;
-    }
 
+    Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->token_, connection->method_, connection->path_, "HTTP/"+connection->http_version_);
     std::istream is(&connection->read_buffer_);
     std::string method;
 
@@ -114,12 +121,8 @@ void Handler::handler_init(){
   };
 
   resource_[std::string("^/?(.*).txt")]["GET"] = [](std::ostream &response, std::shared_ptr<Connection> connection){
-    if(!Authentication::auth_token(connection->token_)){
-      Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->method_, connection->path_, "HTTP/"+connection->http_version_);
-      std::string content = "You have no right to get file.";
-      response << "HTTP/1.1 403 Forbidden\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
+    if(!auth_token(response, connection))
       return;
-    }
 
     Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->token_, connection->method_, connection->path_, "HTTP/"+connection->http_version_);
     boost::asio::streambuf sb;
@@ -140,6 +143,35 @@ void Handler::handler_init(){
     if(std::stof(connection->http_version_) > 1.05)
       response << "Connection: keep-alive\r\n";
     response << "Content-Length: " << length << "\r\n\r\n" << std::istream(&sb).rdbuf();
+  };
+
+  resource_[std::string("^/?kill_process.action$")][std::string("POST")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
+    if(!auth_token(response, connection))
+      return;
+
+    std::istream is(&connection->read_buffer_);
+    std::string processid, pid, method;
+
+    std::getline(is, processid);
+    std::string::size_type start, end;
+    if(start = processid.find("=", processid.find("pid"))+1){
+      end = processid.find("&");
+      pid = end != std::string::npos ? std::string(processid, start, end-start) : std::string(processid, start);
+    }
+    if(start = processid.find("=", processid.find("method"))+1){
+      end = processid.find("&");
+      method = end != std::string::npos ? std::string(processid, start, end-start) : std::string(processid, start);
+    }
+    if("normal" == method)
+      kill(std::stoi(pid), SIGTERM);
+    else if("force" == method)
+      kill(std::stoi(pid), SIGKILL);
+
+    std::string content = "Command had been ran";
+    response << "HTTP/1.1 200 OK\r\n";
+    if(std::stof(connection->http_version_) > 1.05)
+      response << "Connection: keep-alive\r\n";
+    response << "Content-Length: " << content.length() << "\r\n\r\n" << content;
   };
 
   default_resource_[std::string("^/?(.*)$")][std::string("GET")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
