@@ -18,7 +18,7 @@ websocketSSL.o: websocketSSL.cc websocketSSL.h connection.h message.h endpoint.h
 handler.o: handler.cc handler.h utility.h to_json.h logger.h
 	$(G++)
 
-get_info.o: get_info.cc get_info.h to_json.h resource_info.h
+get_info.o: get_info.cc get_info.h to_json.h resource_info.h logger.h
 	$(G++)
 
 to_json.o: to_json.cc to_json.h resource_info.h endpoint.h websocketSSL.h

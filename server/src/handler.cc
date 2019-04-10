@@ -126,7 +126,9 @@ void Handler::handler_init(){
     std::ostream os(&sb);
     std::size_t length = -1;
     if(connection->path_ == "/access_log.txt")
-     length = Logger::read_access_log(os);
+      length = Logger::read_log(os, true);
+    else if(connection->path_ == "/run_log.txt")
+      length = Logger::read_log(os, false);
 
     if(-1 == length){
       std::string content = "Could not open file " + connection->path_;
@@ -137,7 +139,6 @@ void Handler::handler_init(){
     response << "HTTP/1.1 200 OK\r\n";
     if(std::stof(connection->http_version_) > 1.05)
       response << "Connection: keep-alive\r\n";
-    response << "Content-Type: text/plain; charset=utf-8\r\n";
     response << "Content-Length: " << length << "\r\n\r\n" << std::istream(&sb).rdbuf();
   };
 

@@ -3,6 +3,7 @@
 
 #include "utility.h"
 #include "message.h"
+#include "authentication.h"
 #include <memory>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
@@ -55,6 +56,7 @@ public:
     std::unique_lock<std::mutex> lock(socket_close_mutex_);
     socket_->lowest_layer().shutdown(asio::ip::tcp::socket::shutdown_both, ec);
     socket_->lowest_layer().close(ec);
+    Authentication::delete_token(token_);
     std::cout << "关闭TCP" << std::endl;
   }
 

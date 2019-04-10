@@ -1,4 +1,5 @@
 #include "../include/get_info.h"
+#include "../include/logger.h"
 #include <sys/types.h>
 #include <stdio.h>
 #include <dirent.h>
@@ -7,8 +8,6 @@
 #include <sstream>
 #include <string.h>
 #include <unistd.h>
-
-#include <iostream>
 
 const char *kDir = "/proc";
 const char *kOverAllInfoOfUsers = "/proc/key-users";
@@ -209,6 +208,12 @@ void GetInfo::get_usage(){
   int index = 0;
   for(auto &item : procs_info_){
     item.cpu = static_cast<double>(procs_cpu_time_[index++]) / cpu_time * cpu_num_ * 100;
+    if(item.cpu > 100)
+      item.cpu = 100;
+
+    // 超过指定值就写入日志
+    if(item.cpu >= 80 || item.mem >= 50)
+      Logger::write_run_log(item.cmdline, item.state, item.pid, item.ppid, item.userid, item.pmem, item.vmem, item.cpu, item.mem);
   }
 }
 
