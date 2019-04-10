@@ -136,16 +136,16 @@ bool Web::generate_handshake(std::shared_ptr<asio::streambuf> &write_buffer, std
 void Web::respond(std::shared_ptr<Connection> connection){
   std::cout << "Method: " << connection->method_ << std::endl;
   Handler *handler = Handler::get_instance();
-  for(auto res_it : handler->resource_){
-    std::regex express(res_it.first);
+  for(auto res_it : handler->all_resource_){
+    std::regex express(res_it->first);
     std::smatch sm_res;
     if(std::regex_match(connection->path_, sm_res, express)){
-      if(res_it.second.count(connection->method_) > 0){
+      if(res_it->second.count(connection->method_) > 0){
         connection->path_match_ = std::move(sm_res);
 
         auto write_buffer = std::make_shared<asio::streambuf>();
         std::ostream response(write_buffer.get());
-        res_it.second[connection->method_](response, connection);
+        res_it->second[connection->method_](response, connection);
         std::cout << "HTTPS write" << std::endl;
 
         asio::async_write(*connection->socket_, *write_buffer, [this, connection](const error_code &ec, std::size_t /* bytes_transferred */){
@@ -153,6 +153,7 @@ void Web::respond(std::shared_ptr<Connection> connection){
               read_and_parse(connection);
           }
         });
+        break;
       }
     }
   }

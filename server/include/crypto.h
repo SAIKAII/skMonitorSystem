@@ -37,6 +37,15 @@ public:
       result.put('=');
     return result.str();
   }
+
+  static std::string hash_token(const std::string &input, std::size_t iterations = 1) noexcept{
+    std::string hash;
+
+    hash.resize(160/8);
+    SHA1(reinterpret_cast<const unsigned char *>(&input[0]), input.size(), reinterpret_cast<unsigned char *>(&hash[0]));
+
+    return hash;
+  }
 };
 
 #endif

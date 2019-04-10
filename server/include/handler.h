@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <fstream>
+#include <vector>
 
 using resource_type = std::map<std::string, std::unordered_map<std::string, std::function<void(std::ostream&, std::shared_ptr<Connection>)>>>;
 
@@ -18,6 +19,8 @@ public:
   void handler_init();
 
   resource_type resource_;
+  resource_type default_resource_;
+  std::vector<resource_type::iterator> all_resource_;
 
 private:
   Handler(){}

@@ -1,6 +1,9 @@
 #include "../include/handler.h"
 #include "../include/authentication.h"
 #include "../include/to_json.h"
+#include "../include/logger.h"
+#include <boost/asio.hpp>
+#include <iostream>
 
 void read_file_and_generate_response(std::ostream &response, std::shared_ptr<Connection> connection, const std::string &filename, std::string cookie){
   std::ifstream ifs(filename);
@@ -28,38 +31,20 @@ void read_file_and_generate_response(std::ostream &response, std::shared_ptr<Con
 }
 
 void Handler::handler_init(){
-    resource_[std::string("^/?(.*)$")][std::string("GET")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
-    std::string filename = "www/";
-    std::string path = connection->path_match_[1];
-    // 防止使用".."来访问www/目录外的内容
-    // std::size_t last_pos = path.rfind('.');
-    std::size_t current_pos = 0;
-    std::size_t pos;
-    while((pos = path.find('.', current_pos)) != std::string::npos && path[pos+1] == '.'){
-    // while((pos = path.find('.', current_pos)) != std::string::npos && pos != last_pos){
-      current_pos = pos;
-      path.erase(pos, 1);
-      // --last_pos;
-    }
-
-    if(0 < path.length())
-      filename += path;
-
+  resource_[std::string("^/?(index.html)?$")][std::string("GET")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
+    std::string filename;
     if(Authentication::auth_token(connection->token_)){
-      if(0 == path.length())
-        filename += "first.html";
-    }else
-      filename = "www/index.html";
-
-    if(filename.find('.') == std::string::npos){
+      Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->token_, connection->method_, connection->path_, "HTTP/"+connection->http_version_);
+      filename = "www/first.html";
+    }else{
+      Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->method_, connection->path_, "HTTP/"+connection->http_version_);
       filename = "www/index.html";
     }
-    std::cout << "filename: " << filename << std::endl;
-
     read_file_and_generate_response(response, connection, filename, std::string());
   };
 
   resource_[std::string("^/?login.action$")][std::string("POST")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
+    Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->method_, connection->path_, "HTTP/"+connection->http_version_);
     std::istream is(&connection->read_buffer_);
     std::string username, pwd, username_pwd;
 
@@ -90,6 +75,7 @@ void Handler::handler_init(){
   };
 
   resource_[std::string("^/?power_change.action$")][std::string("POST")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
+    Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->token_, connection->method_, connection->path_, "HTTP/"+connection->http_version_);
     if(!Authentication::auth_token(connection->token_)){
       std::string content = "You have no right to do this.";
       response << "HTTP/1.1 403 Forbidden\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
@@ -126,4 +112,71 @@ void Handler::handler_init(){
     std::string content = "Request success.";
     response << "HTTP/1.1 200 OK\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
   };
+
+  resource_[std::string("^/?(.*).txt")]["GET"] = [](std::ostream &response, std::shared_ptr<Connection> connection){
+    if(!Authentication::auth_token(connection->token_)){
+      Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->method_, connection->path_, "HTTP/"+connection->http_version_);
+      std::string content = "You have no right to get file.";
+      response << "HTTP/1.1 403 Forbidden\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
+      return;
+    }
+
+    Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->token_, connection->method_, connection->path_, "HTTP/"+connection->http_version_);
+    boost::asio::streambuf sb;
+    std::ostream os(&sb);
+    std::size_t length = -1;
+    if(connection->path_ == "/access_log.txt")
+     length = Logger::read_access_log(os);
+
+    if(-1 == length){
+      std::string content = "Could not open file " + connection->path_;
+      response << "HTTP/1.1 400 Bad Request\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
+      return;
+    }
+
+    response << "HTTP/1.1 200 OK\r\n";
+    if(std::stof(connection->http_version_) > 1.05)
+      response << "Connection: keep-alive\r\n";
+    response << "Content-Type: text/plain; charset=utf-8\r\n";
+    response << "Content-Length: " << length << "\r\n\r\n" << std::istream(&sb).rdbuf();
+  };
+
+  default_resource_[std::string("^/?(.*)$")][std::string("GET")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
+    std::string filename = "www/";
+    std::string path = connection->path_match_[1];
+    // 防止使用".."来访问www/目录外的内容
+    // std::size_t last_pos = path.rfind('.');
+    std::size_t current_pos = 0;
+    std::size_t pos;
+    while((pos = path.find('.', current_pos)) != std::string::npos && path[pos+1] == '.'){
+    // while((pos = path.find('.', current_pos)) != std::string::npos && pos != last_pos){
+      current_pos = pos;
+      path.erase(pos, 1);
+      // --last_pos;
+    }
+
+    if(0 < path.length())
+      filename += path;
+
+    if(Authentication::auth_token(connection->token_)){
+      Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->token_, connection->method_, connection->path_, "HTTP/"+connection->http_version_);
+      if(0 == path.length())
+        filename += "first.html";
+    }else{
+      Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->method_, connection->path_, "HTTP/"+connection->http_version_);
+      filename = "www/index.html";
+    }
+
+    if(filename.find('.') == std::string::npos){
+      filename = "www/index.html";
+    }
+    std::cout << "filename: " << filename << std::endl;
+
+    read_file_and_generate_response(response, connection, filename, std::string());
+  };
+
+  for(auto it = resource_.begin(); it != resource_.end(); ++it)
+    all_resource_.push_back(it);
+  for(auto it = default_resource_.begin(); it != default_resource_.end(); ++it)
+    all_resource_.push_back(it);
 }
