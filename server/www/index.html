@@ -3,12 +3,36 @@
   <head>
     <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
     <title>Login</title>
+    <style>
+      .fm{
+        margin-left: 40%;
+        margin-top: 10%;
+        height: 250px;
+        width: 300px;
+        padding: 50px 30px;
+        border-radius: 20px;
+        /* border: 2px solid #8AC007; */
+        /* background-color:rgba(0,152,50, 0.5); */
+        background-image: linear-gradient(to top, #0250c5 0%, #d43f8d 100%);
+        /* background-image: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%); */
+      }
+    </style>
   </head>
-  <body>
-    <form action="login.action" method="POST">
-      用户名:<input type="text" name="username"/><br/>
-      密码:<input type="password" name="pwd"/><br/>
-      <input type="submit" value="登录"/>
-    </form>
+  <body style="height: 720px; background: url(./loginbg.png) no-repeat center; background-size: cover;">
+    <script>
+      // window.onload = function(){
+      //   document.getElementByTagName('body').style.height = window.innerHeight;
+      // }
+    </script>
+    <div id = "div_global">
+      <form action="login.action" method="POST" class="fm">
+        <span>
+          <h2>登录认证</h2>
+          <input style="height: 25px; width: 255px;" type="text" placeholder="用户名" name="username"/><br/>
+          <input style="height: 25px; width: 255px; margin-top: 20px;" placeholder="密码" type="password" name="pwd"/><br/>
+          <input style="width: 235px; height: 30px; margin-top: 25px;" type="submit" value="登录"/>
+        </span>
+      </form>
+    </div>
   </body>
 </html>

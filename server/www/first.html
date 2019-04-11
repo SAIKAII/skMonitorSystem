@@ -4,25 +4,77 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <!-- <script src="./jquery-3.2.1.min.js"></script> -->
 <title>WebSocket Test</title>
+<style>
+.tabtop1 th{
+  background-image: linear-gradient(45deg, #93a5cf 0%, #e4efe9 100%);
+}
+.tabtop1 td{
+  text-align: center;
+}
+.tabtop2{
+  margin-left: 15px;
+  margin-top: 35px;
+}
+.tabtop2 th{
+  height: 25px;
+  background-image: linear-gradient(45deg, #93a5cf 0%, #e4efe9 100%);
+}
+.tabtop2 td{
+  text-align: center;
+}
+.st{
+  width: 50px;
+}
+.p{
+  width: 80px;
+}
+.m{
+  width: 120px;
+}
+.cm{
+  width: 100px;
+}
+.cmd{
+  width: 300px;
+}
+</style>
 </head>
 <body>
 <script>
 var ws;
 window.onload=function(){
-  // ws=new WebSocket("wss://saikaii.xyz:443/print");
+  // wss=new WebSocket("wss://saikaii.xyz:443/print");
   wss=new WebSocket("wss://10.13.16.208:443/print");
   wss.onmessage=function(evt){
     // console.log(evt.data);
+    var total_info = document.getElementById('div_total');
     var content = document.getElementById('div_msg');
+    total_info.clear;
     content.clear;
 
     var json = eval('(' + evt.data + ')');
-    var str = "<table><tr><th>状态</th><th>进程id</th><th>进程父id</th><th>用户id</th><th>物理内存(KB)</th><th>虚拟内存(KB)</th><th>cpu(%)</th><th>内存占比(%)</th><th>命令</th></tr>";
+    var total_str = "<table border='1' cellspacing='1' cellpadding='4' class='tabtop1'>";
+    total_str = total_str + "<tr><th colspan='4'>总用户数</th></th>";
+    total_str = total_str + "<tr><td colspan='4'>" + json.users + "</td></tr>";
+    total_str = total_str + "<tr><th>总进程数</th><th>1min平均负载</th><th>5min平均负载</th><th>15min平均负载</th></tr>";
+    total_str = total_str + "<tr><td>" + json.total + "</td><td>" + json.avg_one + "</td><td>" + json.avg_five + "</td><td>" + json.avg_fiftheen + "</td></tr>";
+    total_str = total_str + "<tr><th>运行中</th><th>睡眠中</th><th>停止中</th><th>僵尸进程</th></tr>";
+    total_str = total_str + "<tr><td>" + json.running + "</td><td>" + json.sleeping + "</td><td>" + json.stopped + "</td><td>" + json.zombie + "</td></tr>";
+    total_str = total_str + "<tr><th>总物理内存</th><th>可用物理内存</th><th>已用物理内存</th><th>缓冲区</th></tr>";
+    total_str = total_str + "<tr><td>" + json.mem_total + "</td><td>" + json.mem_free + "</td><td>" + json.mem_used + "</td><td>" + json.buffer_cached + "</td></tr>";
+    total_str = total_str + "<tr><th>总交换区</th><th>可用交换区</th><th>已用交换区</th><th>可用</th></tr>";
+    total_str = total_str + "<tr><td>" + json.swap_total + "</td><td>" + json.swap_free + "</td><td>" + json.swap_used + "</td><td>" + json.avail + "</td></tr>";
+    total_str = total_str + "</table>";
+
+    // var str = "<table border='1'><tr><th>State</th><th>pid</th><th>ppid</th><th>userid</th><th>pmem(KB)</th><th>vmem(KB)</th><th>cpu(%)</th><th>memory(%)</th><th>command</th></tr>";
+    var str = "<table border='1' cellspacing='1' cellpadding='4' class='tabtop2'><tr style='position: fixed; z-index: 2; left: 24px; top: 2px;'><th class='st'>状态</th><th class='p'>进程id</th><th class='p'>进程父id</th><th class='p'>用户id</th><th class='m'>物理内存(KB)</th><th class='m'>虚拟内存(KB)</th><th class='cm'>cpu(%)</th><th class='cm'>内存占比(%)</th><th class='cmd'>命令</th></tr>";
     for(i in json.processinfo){
-      str = str + "<tr><td>" + json.processinfo[i].state + "</td><td>" + json.processinfo[i].pid + "</td><td>" + json.processinfo[i].ppid + "</td><td>" + json.processinfo[i].userid + "</td><td>"  + json.processinfo[i].pmem + "</td><td>";
-      str = str + json.processinfo[i].vmem + "</td><td>" + json.processinfo[i].cpu + "</td><td>" + json.processinfo[i].mem + "</td><td>" + json.processinfo[i].cmdline + "</td></tr>";
+      str = str + "<tr><td class='st'>" + json.processinfo[i].state + "</td><td class='p'>" + json.processinfo[i].pid + "</td><td class='p'>" + json.processinfo[i].ppid + "</td><td class='p'>" + json.processinfo[i].userid + "</td><td class='m'>"  + json.processinfo[i].pmem + "</td><td class='m'>";
+      str = str + json.processinfo[i].vmem + "</td><td class='cm'>" + json.processinfo[i].cpu + "</td><td class='cm'>" + json.processinfo[i].mem + "</td><td class='cmd'>" + json.processinfo[i].cmdline + "</td></tr>";
     }
     str += "</table>";
+
+    total_info.innerHTML = total_str;
     content.innerHTML = str;
   };
   wss.onopen=function(evt){
@@ -61,14 +113,19 @@ function send_kill(md){
   xmlhttp.send("pid=" + pid.value + "&method=" + md);
 }
 </script>
-<div id = "div_msg"></div>
-<button type="button" onclick="send_request('cpu_first')">CPU优先</button>
-<button type="button" onclick="send_request('mem_first')">MEM优先</button>
-<button type="button" onclick="send_request('normal')">缺省方式</button>
+<div>
+  <div id = "div_msg"></div>
+  <div id = "div_total" style="float: right; position: fixed; right: 10%; top: 10px;"></div>
+  <div style="float: right; position: fixed; right: 9%; bottom: 10%;">
+    <button type="button" onclick="send_request('cpu_first')">CPU优先</button>
+    <button type="button" onclick="send_request('mem_first')">MEM优先</button>
+    <button type="button" onclick="send_request('normal')">缺省方式</button>
+    <a href="/access_log.txt" target="_blank"><button type="button">获取访问日志</button></a>
+    <a href="/run_log.txt" target="_blank"><button type="button">获取服务器运行日志</button></a><br/>
+    <div style="margin-top: 20px;"><input type="text" id = "processid" placeholder="进程id"/>
+    <button type="button" onclick="send_kill('normal')">正常关闭进程</button>
+    <button type="button" onclick="send_kill('force')">强制关闭进程</button></div>
+  </div>
+</div>
 </body>
-<a href="/access_log.txt" target="_blank"><button type="button">获取访问日志</button></a>
-<a href="/run_log.txt" target="_blank"><button type="button">获取服务器运行日志</button></a>
-<input type="text" id = "processid" value="进程id"/>
-<button type="button" onclick="send_kill('normal')">正常关闭进程</button>
-<button type="button" onclick="send_kill('force')">强制关闭进程</button>
 </html>
