@@ -1,8 +1,9 @@
-#ifndef skMNTSYS_INCLUDE_CONNECTION_H_
-#define skMNTSYS_INCLUDE_CONNECTION_H_
+#ifndef SKMNTSYS_INCLUDE_CONNECTION_H_
+#define SKMNTSYS_INCLUDE_CONNECTION_H_
 
 #include "utility.h"
 #include "message.h"
+#include "display_format.h"
 #include "authentication.h"
 #include <memory>
 #include <boost/asio.hpp>
@@ -37,6 +38,7 @@ public:
   asio::streambuf read_buffer_;
   std::shared_ptr<Message> fragmented_message_;
   std::string token_;
+  std::shared_ptr<DisplayFormat> display_format_;
 
   std::string remote_endpoint_address() noexcept{
     try{
@@ -57,7 +59,7 @@ public:
     socket_->lowest_layer().shutdown(asio::ip::tcp::socket::shutdown_both, ec);
     socket_->lowest_layer().close(ec);
     Authentication::delete_token(token_);
-    std::cout << "关闭TCP" << std::endl;
+    //std::cout << "关闭TCP" << std::endl;
   }
 
 private:

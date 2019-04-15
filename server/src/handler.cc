@@ -2,6 +2,9 @@
 #include "../include/authentication.h"
 #include "../include/to_json.h"
 #include "../include/logger.h"
+#include "../include/total_format.h"
+#include "../include/mem_format.h"
+#include "../include/usage_format.h"
 #include <boost/asio.hpp>
 #include <iostream>
 #include <signal.h>
@@ -52,6 +55,33 @@ void Handler::handler_init(){
       Logger::write_access_log(connection->remote_endpoint_.address().to_string(), connection->method_, connection->path_, "HTTP/"+connection->http_version_);
       filename = "www/index.html";
     }
+    read_file_and_generate_response(response, connection, filename, std::string());
+  };
+
+  resource_[std::string("^/?first.html$")][std::string("GET")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
+    if(!auth_token(response, connection))
+      return;
+
+    std::string filename = "www/first.html";
+    connection->display_format_ = std::make_shared<TotalFormat>();
+    read_file_and_generate_response(response, connection, filename, std::string());
+  };
+
+  resource_[std::string("^/?usage.html$")][std::string("GET")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
+    if(!auth_token(response, connection))
+      return;
+
+    std::string filename = "www/usage.html";
+    connection->display_format_ = std::make_shared<UsageFormat>();
+    read_file_and_generate_response(response, connection, filename, std::string());
+  };
+
+  resource_[std::string("^/?mem.html$")][std::string("GET")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
+    if(!auth_token(response, connection))
+      return;
+
+    std::string filename = "www/mem.html";
+    connection->display_format_ = std::make_shared<MemFormat>();
     read_file_and_generate_response(response, connection, filename, std::string());
   };
 
@@ -106,13 +136,13 @@ void Handler::handler_init(){
     std::string m = end != std::string::npos ? std::string(method, start, end-start) : std::string(method, start);
 
     if("cpu_first" == m){
-      std::cout << "CPU first" << std::endl;
+      //std::cout << "CPU first" << std::endl;
       ToJSON::sort_method_ = ToJSON::CPU_FIRST;
     }else if("mem_first" == m){
-      std::cout << "MEM first" << std::endl;
+      //std::cout << "MEM first" << std::endl;
       ToJSON::sort_method_ = ToJSON::MEM_FIRST;
     }else{
-      std::cout << "Normal" << std::endl;
+      //std::cout << "Normal" << std::endl;
       ToJSON::sort_method_ = ToJSON::NORMAL;
     }
 
@@ -203,7 +233,7 @@ void Handler::handler_init(){
     if(filename.find('.') == std::string::npos){
       filename = "www/index.html";
     }
-    std::cout << "filename: " << filename << std::endl;
+    //std::cout << "filename: " << filename << std::endl;
 
     read_file_and_generate_response(response, connection, filename, std::string());
   };

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Total</title>
+    <style>
+    .tabtop1 th{
+      background-image: linear-gradient(45deg, #93a5cf 0%, #e4efe9 100%);
+    }
+    .tabtop1 td{
+      text-align: center;
+    }
+    .st{
+      width: 50px;
+    }
+    .p{
+      width: 80px;
+    }
+    .cm{
+      width: 100px;
+    }
+    .cmd{
+      width: 300px;
+    }
+    </style>
+  </head>
+  <body>
+    <script>
+      var wss;
+      window.onload=function(){
+        // wss=new WebSocket("wss://saikaii.xyz:443/print");
+        wss=new WebSocket("wss://10.13.16.208:443/print/usage");
+        wss.onmessage=function(evt){
+          // console.log(evt.data);
+          var content = document.getElementById('div_usage');
+          content.clear;
+
+          var json = eval('(' + evt.data + ')');
+          var str = "<table border='1' cellspacing='1' cellpadding='4' class='tabtop1'><tr><th class='cmd'>进程名</th><th class='p'>进程id</th><th class='p'>进程父id</th><th class='p'>用户id</th><th class='cm'>CPU占比(%)</th><th class='cm'>内存占比(%)</th><th class='st'>状态</th></tr>";
+          for(i in json.processinfo){
+            str = str + "<tr><td class='cmd'>" + json.processinfo[i].cmdline + "</td><td class='p'>" + json.processinfo[i].pid + "</td><td class='p'>" + json.processinfo[i].ppid + "</td><td class='p'>" + json.processinfo[i].userid + "</td><td class='cm'>"  + json.processinfo[i].cpu + "</td><td class='cm'>";
+            str = str + json.processinfo[i].mem + "</td><td class='st'>" + json.processinfo[i].state + "</td></tr>";
+          }
+          str += "</table>";
+
+          content.innerHTML = str;
+        };
+        wss.onopen=function(evt){
+          // ws.send("Hello");
+        }
+      }
+      window.onclose=function(){
+        wss.close();
+      }
+      function send_request(md){
+        var xmlhttp;
+        if(window.XMLHttpRequest){
+          // IE7+, Firefox, Chrome, Opera, Safari 浏览器执行代码
+          xmlhttp = new XMLHttpRequest();
+        }else{
+          // IE6, IE5 浏览器执行代码
+          xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange=function(){}
+        xmlhttp.open("POST", "/power_change.action",true);
+        xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xmlhttp.send("method=" + md);
+      }
+      function send_kill(md){
+        var xmlhttp;
+        if(window.XMLHttpRequest){
+          xmlhttp = new XMLHttpRequest();
+        }else{
+          xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        var pid = document.getElementById('processid');
+
+        xmlhttp.onreadystatechange = function(){}
+        xmlhttp.open("POST", "/kill_process.action", true);
+        xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xmlhttp.send("pid=" + pid.value + "&method=" + md);
+      }
+    </script>
+    <div align="center">
+      <button type="button" onclick="send_request('cpu_first')">以CPU占用率从高到低排序</button>
+      <button type="button" onclick="send_request('mem_first')">以内存占用率从高到低排序</button>
+      <button type="button" onclick="send_request('normal')">缺省方式排序</button><br/>
+      <div style="margin-top: 20px;">
+        <input type="text" id = "processid" placeholder="进程id"/>
+        <button type="button" onclick="send_kill('normal')">正常关闭进程</button>
+        <button type="button" onclick="send_kill('force')">强制关闭进程</button>
+      </div>
+    </div>
+    <div id="div_usage" align="center"></div>
+  </body>
+</html>

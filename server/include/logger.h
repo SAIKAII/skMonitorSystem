@@ -1,5 +1,5 @@
-#ifndef skMNTSYS_INCLUDE_LOGGER_H_
-#define skMNTSYS_INCLUDE_LOGGER_H_
+#ifndef SKMNTSYS_INCLUDE_LOGGER_H_
+#define SKMNTSYS_INCLUDE_LOGGER_H_
 
 #include <string>
 #include <iostream>

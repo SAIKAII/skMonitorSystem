@@ -5,7 +5,7 @@ std::unordered_set<std::string> Authentication::auth_;
 std::string Authentication::token_magic_string_ = "saikaii";
 
 std::string Authentication::generator_token(const std::string &id_card){
-  std::string token = Crypto::hash_token(id_card + token_magic_string_);
+  std::string token = Crypto::base64_encode(Crypto::sha1(id_card + token_magic_string_));
   auth_.insert(token);
   return token;
 }

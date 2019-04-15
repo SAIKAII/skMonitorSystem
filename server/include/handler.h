@@ -1,5 +1,5 @@
-#ifndef skMNTSYS_INCLUDE_HANDLER_H_
-#define skMNTSYS_INCLUDE_HANDLER_H_
+#ifndef SKMNTSYS_INCLUDE_HANDLER_H_
+#define SKMNTSYS_INCLUDE_HANDLER_H_
 
 #include "utility.h"
 #include "connection.h"

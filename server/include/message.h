@@ -1,5 +1,5 @@
-#ifndef skMNTSYS_INCLUDE_MESSAGE_H_
-#define skMNTSYS_INCLUDE_MESSAGE_H_
+#ifndef SKMNTSYS_INCLUDE_MESSAGE_H_
+#define SKMNTSYS_INCLUDE_MESSAGE_H_
 
 #include <iostream>
 #include <boost/asio.hpp>

@@ -1,5 +1,5 @@
-#ifndef skMNTSYS_INCLUDE_UTILITY_H_
-#define skMNTSYS_INCLUDE_UTILITY_H_
+#ifndef SKMNTSYS_INCLUDE_UTILITY_H_
+#define SKMNTSYS_INCLUDE_UTILITY_H_
 
 
 #include <memory>
@@ -52,7 +52,7 @@ public:
       method = sub_match[1];
       path = sub_match[2];
       version = sub_match[3];
-      std::cout << "method: " << method << " path: " << path << " version: " << version << std::endl;
+      //std::cout << "method: " << method << " path: " << path << " version: " << version << std::endl;
 
       std::regex regex_path("^([^ ])*\?([^ ]*)$");
       if(std::regex_match(path, sub_match, regex_path))
@@ -63,7 +63,7 @@ public:
       header.clear();
       do{
         std::getline(stream, line);
-        std::cout << line << std::endl;
+        //std::cout << line << std::endl;
         line.pop_back();
         matched = std::regex_match(line, sub_match, regex_line);
         if(true == matched){

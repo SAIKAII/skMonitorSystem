@@ -1,5 +1,5 @@
-#ifndef skMNTSYS_INCLUDE_CRYPTO_H_
-#define skMNTSYS_INCLUDE_CRYPTO_H_
+#ifndef SKMNTSYS_INCLUDE_CRYPTO_H_
+#define SKMNTSYS_INCLUDE_CRYPTO_H_
 
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/binary_from_base64.hpp>
@@ -36,15 +36,6 @@ public:
     for(size_t i = 0; i < equal_count; ++i)
       result.put('=');
     return result.str();
-  }
-
-  static std::string hash_token(const std::string &input, std::size_t iterations = 1) noexcept{
-    std::string hash;
-
-    hash.resize(160/8);
-    SHA1(reinterpret_cast<const unsigned char *>(&input[0]), input.size(), reinterpret_cast<unsigned char *>(&hash[0]));
-
-    return hash;
   }
 };
 

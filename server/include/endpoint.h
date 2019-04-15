@@ -1,5 +1,5 @@
-#ifndef skMNTSYS_INCLUDE_ENDPOINT_H_
-#define skMNTSYS_INCLUDE_ENDPOINT_H_
+#ifndef SKMNTSYS_INCLUDE_ENDPOINT_H_
+#define SKMNTSYS_INCLUDE_ENDPOINT_H_
 
 #include <functional>
 #include <memory>
@@ -28,7 +28,7 @@ public:
   }
 
   void connection_open(std::shared_ptr<WebSocketSSL> wss){
-    std::cout << "connection_open()" << std::endl;
+    //std::cout << "connection_open()" << std::endl;
     std::unique_lock<std::mutex> lock(connections_mutex_);
     connections_.insert(wss);
   }

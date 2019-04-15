@@ -2,6 +2,9 @@
 #include "../include/crypto.h"
 #include "../include/handler.h"
 #include "../include/authentication.h"
+#include "../include/total_format.h"
+#include "../include/mem_format.h"
+#include "../include/usage_format.h"
 #include <utility>
 
 void Web::start(){
@@ -45,8 +48,8 @@ void Web::accept(){
 
     if(!ec){
       // 不使用nagle算法
-      // asio::ip::tcp::no_delay option(true);
-      // connection->socket_->set_option(option);
+      asio::ip::tcp::no_delay option(true);
+      connection->socket_->lowest_layer().set_option(option);
 
       connection->socket_->async_handshake(asio::ssl::stream_base::server, [this, connection](const error_code &ec){
         if(!ec)
@@ -77,7 +80,7 @@ void Web::read_and_parse(std::shared_ptr<Connection> connection){
 }
 
 void Web::http_resolve(std::shared_ptr<Connection> connection, std::size_t bytes_transferred){
-  std::cout << "HTTPS Request" << std::endl;
+  //std::cout << "HTTPS Request" << std::endl;
   if(connection->header_.count("Content-Length") > 0){
     std::size_t total = connection->read_buffer_.size();
 
@@ -94,11 +97,19 @@ void Web::http_resolve(std::shared_ptr<Connection> connection, std::size_t bytes
 
 void Web::write_handshake(std::shared_ptr<Connection> connection){
   auto write_buffer = std::make_shared<asio::streambuf>();
-  static std::regex express("^/print/?$");
+  static std::regex express("^/print/?(.*)?$");
+  std::smatch sm_res;
   // 如果发现不是合法路径请求
-  if(!std::regex_match(connection->path_.begin(), connection->path_.end(), express)){
+  if(!std::regex_match(connection->path_, sm_res, express)){
     return;
   }
+
+  if(sm_res.size() > 1 && sm_res[1] == "usage")
+    connection->display_format_ = std::make_shared<UsageFormat>();
+  else if(sm_res.size() > 1 && sm_res[1] == "mem")
+    connection->display_format_ = std::make_shared<MemFormat>();
+  else
+    connection->display_format_ = std::make_shared<TotalFormat>();
 
   if(generate_handshake(write_buffer, connection)){
     asio::async_write(*connection->socket_, *write_buffer, [this, connection](const error_code &ec, std::size_t /*bytes_transferred*/){
@@ -134,7 +145,7 @@ bool Web::generate_handshake(std::shared_ptr<asio::streambuf> &write_buffer, std
 }
 
 void Web::respond(std::shared_ptr<Connection> connection){
-  std::cout << "Method: " << connection->method_ << std::endl;
+  //std::cout << "Method: " << connection->method_ << std::endl;
   Handler *handler = Handler::get_instance();
   for(auto res_it : handler->all_resource_){
     std::regex express(res_it->first);
@@ -146,7 +157,7 @@ void Web::respond(std::shared_ptr<Connection> connection){
         auto write_buffer = std::make_shared<asio::streambuf>();
         std::ostream response(write_buffer.get());
         res_it->second[connection->method_](response, connection);
-        std::cout << "HTTPS write" << std::endl;
+        //std::cout << "HTTPS write" << std::endl;
 
         asio::async_write(*connection->socket_, *write_buffer, [this, connection](const error_code &ec, std::size_t /* bytes_transferred */){
           if(!ec){

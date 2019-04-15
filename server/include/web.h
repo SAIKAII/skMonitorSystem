@@ -1,5 +1,5 @@
-#ifndef skMNTSYS_INCLUDE_WEB_H_
-#define skMNTSYS_INCLUDE_WEB_H_
+#ifndef SKMNTSYS_INCLUDE_WEB_H_
+#define SKMNTSYS_INCLUDE_WEB_H_
 
 #include "config.h"
 #include "utility.h"

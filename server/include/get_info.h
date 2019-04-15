@@ -1,5 +1,5 @@
-#ifndef MNTSYS_INCLUDE_GET_INFO_H_
-#define MNTSYS_INCLUDE_GET_INFO_H_
+#ifndef SKMNTSYS_INCLUDE_GET_INFO_H_
+#define SKMNTSYS_INCLUDE_GET_INFO_H_
 
 #include "to_json.h"
 #include "resource_info.h"

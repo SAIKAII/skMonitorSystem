@@ -6,7 +6,7 @@
 #include <mutex>
 
 void WebSocketSSL::read_message(){
-  std::cout << "read_message()" << std::endl;
+  //std::cout << "read_message()" << std::endl;
   Endpoint *endpoint = Endpoint::get_instance();
   asio::async_read(*connection_->socket_, connection_->read_buffer_, asio::transfer_exactly(2), [this, endpoint](const error_code &ec, std::size_t bytes_transferred){
     if(!ec){
@@ -30,8 +30,6 @@ void WebSocketSSL::read_message(){
       }
 
       std::size_t length = (first_bytes[1] & 127); // 01111111b
-
-      std::cout << "length: " << length << std::endl;
 
       if(length == 126){
         // 接下来2字节是内容长度指示（超过125字节，标记为126的情况）
@@ -77,7 +75,6 @@ void WebSocketSSL::read_message(){
 }
 
 void WebSocketSSL::read_message_content(std::size_t length, unsigned char fin_rsv_opcode){
-  std::cout << "read_message_content()" << std::endl;
   Endpoint *endpoint = Endpoint::get_instance();
   // 这里的4是代表mask大小
   asio::async_read(*connection_->socket_, connection_->read_buffer_, asio::transfer_exactly(4 + length), [this, length, fin_rsv_opcode, endpoint](const error_code &ec, std::size_t /* bytes_transferred */){
@@ -130,7 +127,7 @@ void WebSocketSSL::read_message_content(std::size_t length, unsigned char fin_rs
 }
 
 void WebSocketSSL::send_close(int status, const std::string &reason){
-  std::cout << "send_close()" << std::endl;
+  //std::cout << "send_close()" << std::endl;
   if(connection_->closed_)
     return;
   connection_->closed_ = true;
@@ -148,7 +145,6 @@ void WebSocketSSL::send_close(int status, const std::string &reason){
 
 // 向发送指定数据
 void WebSocketSSL::send(const std::shared_ptr<asio::streambuf> &send_stream, unsigned char fin_rsv_opcode){
-  std::cout << "send()" << std::endl;
   if(connection_->closed_)
     return;
   std::shared_ptr<asio::streambuf> header_stream = std::make_shared<asio::streambuf>();
@@ -167,7 +163,6 @@ void WebSocketSSL::send(const std::shared_ptr<asio::streambuf> &send_stream, uns
 }
 
 void WebSocketSSL::create_header(std::ostream &stream, const std::shared_ptr<asio::streambuf> &send_stream, unsigned char fin_rsv_opcode){
-  std::cout << "create_header" << std::endl;
   std::size_t length = send_stream->size();
 
   stream.put(static_cast<char>(fin_rsv_opcode));
