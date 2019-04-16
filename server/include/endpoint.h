@@ -1,6 +1,7 @@
 #ifndef SKMNTSYS_INCLUDE_ENDPOINT_H_
 #define SKMNTSYS_INCLUDE_ENDPOINT_H_
 
+#include "to_json.h"
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -8,7 +9,7 @@
 #include <boost/asio.hpp>
 #include <string>
 
-#include <iostream>
+//#include <iostream>
 
 using error_code = boost::system::error_code;
 
@@ -36,11 +37,13 @@ public:
   void connection_close(std::shared_ptr<WebSocketSSL> wss, int status, const std::string &reason){
     std::unique_lock<std::mutex> lock(connections_mutex_);
     connections_.erase(wss);
+    ToJSON::sort_method_ = ToJSON::NORMAL;
   }
 
   void connection_error(std::shared_ptr<WebSocketSSL> wss, const error_code &ec){
     std::unique_lock<std::mutex> lock(connections_mutex_);
     connections_.erase(wss);
+    ToJSON::sort_method_ = ToJSON::NORMAL;
   }
 
 private:
