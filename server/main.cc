@@ -2,6 +2,7 @@
 #include "include/handler.h"
 #include "include/get_info.h"
 #include "include/to_json.h"
+#include "include/authentication.h"
 #include <chrono>
 #include <ctime>
 #include <iostream>
@@ -11,6 +12,8 @@
 int main(){
   Handler *handler = Handler::get_instance();
   handler->handler_init();
+  Authentication::init("acount.txt");
+
   Web web(443, "server.crt", "server.key");
   std::thread t([](){
     GetInfo get_info;

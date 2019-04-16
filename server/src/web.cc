@@ -159,7 +159,7 @@ void Web::respond(std::shared_ptr<Connection> connection){
         res_it->second[connection->method_](response, connection);
         //std::cout << "HTTPS write" << std::endl;
 
-        asio::async_write(*connection->socket_, *write_buffer, [this, connection](const error_code &ec, std::size_t /* bytes_transferred */){
+        asio::async_write(*connection->socket_, *write_buffer, [this, connection, write_buffer](const error_code &ec, std::size_t /* bytes_transferred */){
           if(!ec){
               read_and_parse(connection);
           }

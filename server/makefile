@@ -6,7 +6,7 @@ G++ = g++ -std=c++11 -lpthread -g -o $@ -c $<
 mntsys: $(OBJECTS)
 	g++ -o mntsys $(OBJECTS) -std=c++11 -lssl -lcrypto -lpthread
 
-main.o: main.cc web.h handler.h get_info.h to_json.h
+main.o: main.cc web.h handler.h get_info.h to_json.h authentication.h
 	$(G++)
 
 web.o: web.cc web.h config.h utility.h connection.h websocketSSL.h crypto.h handler.h authentication.h total_format.h usage_format.h mem_format.h

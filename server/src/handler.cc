@@ -25,7 +25,6 @@ void read_file_and_generate_response(std::ostream &response, std::shared_ptr<Con
     if(cookie.length() > 0)
       response << "Set-Cookie: my_cookie=" << cookie << ";Secure\r\n";
     response << "Content-Type: text/html; charset=utf-8\r\n";
-    // response << "Content-Encoding: gzip\r\n";
     response << "Content-Length: " << length << "\r\n\r\n" << ifs.rdbuf();
 
     ifs.close();
@@ -56,6 +55,29 @@ void Handler::handler_init(){
       filename = "www/index.html";
     }
     read_file_and_generate_response(response, connection, filename, std::string());
+  };
+
+  resource_[std::string("^/?loginbg.png$")][std::string("GET")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
+    std::string filename = "www/loginbg.png";
+    std::ifstream ifs(filename);
+    if(ifs){
+      ifs.seekg(0, std::ios::end);
+      std::size_t length = ifs.tellg();
+
+      ifs.seekg(0, std::ios::beg);
+
+      // 组建响应
+      response << "HTTP/1.1 200 OK\r\n";
+      if(std::stof(connection->http_version_) > 1.05) // 持久连接
+        response << "Connection: keep-alive\r\n";
+      response << "Content-Type: image/png\r\n";
+      response << "Content-Length: " << length << "\r\n\r\n" << ifs.rdbuf();
+
+      ifs.close();
+    }else{
+      std::string content = "Could not open file " + filename;
+      response << "HTTP/1.1 400 Bad Request\r\nContent-Length: " << content.length() << "\r\n\r\n" << content;
+    }
   };
 
   resource_[std::string("^/?first.html$")][std::string("GET")] = [](std::ostream &response, std::shared_ptr<Connection> connection){
@@ -101,7 +123,7 @@ void Handler::handler_init(){
       pwd = end != std::string::npos ? std::string(username_pwd, start, end-start) : std::string(username_pwd, start);
     }
 
-    if(username == "admin" && pwd == "admin"){
+    if(Authentication::verificate(username, pwd)){
       std::string token = Authentication::generator_token(username + pwd);
       connection->token_ = token;
 

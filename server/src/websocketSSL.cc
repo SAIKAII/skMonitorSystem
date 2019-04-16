@@ -153,9 +153,9 @@ void WebSocketSSL::send(const std::shared_ptr<asio::streambuf> &send_stream, uns
 
   auto self = this->shared_from_this(); // 这个是必须的，否则在发现关闭连接的时候，数据还没发完，对象就被销毁了
 
-  asio::async_write(*connection_->socket_, *header_stream, [this, self, send_stream](const error_code &ec, std::size_t /* bytes_transferred */){
+  asio::async_write(*connection_->socket_, *header_stream, [this, self, header_stream, send_stream](const error_code &ec, std::size_t /* bytes_transferred */){
     if(!ec){
-      asio::async_write(*connection_->socket_, *send_stream, [this](const error_code &ec, std::size_t /* bytes_transferred */){
+      asio::async_write(*connection_->socket_, *send_stream, [this, send_stream](const error_code &ec, std::size_t /* bytes_transferred */){
         // ...不处理
       });
     }
